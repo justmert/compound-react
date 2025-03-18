@@ -1,0 +1,45 @@
+---
+title: 'useTransfer'
+description: 'Transfer base tokens from the sender to another account'
+---
+
+The `useTransfer` hook transfers base tokens from the sender to another account.
+
+## Usage
+
+```jsx
+import { useTransfer } from 'compound-react';
+
+function TransferComponent() {
+  const { transfer, loading, error, txHash } = useTransfer();
+  
+  const handleTransfer = async () => {
+    // Transfer 100 USDC to recipient
+    const recipient = '0xRecipient...';
+    const amount = ethers.utils.parseUnits('100', 6); // 100 USDC with 6 decimals
+    const tx = await transfer(recipient, amount);
+    console.log('Transfer transaction:', tx);
+  };
+  
+  return (
+    <div>
+      <button onClick={handleTransfer} disabled={loading}>
+        {loading ? 'Transferring...' : 'Transfer 100 USDC'}
+      </button>
+      {error && <p>Error: {error.message}</p>}
+      {txHash && <p>Transaction: {txHash}</p>}
+    </div>
+  );
+}
+```
+
+## Return Value
+
+```typescript
+{
+  transfer: (dst: string, amount: BigNumber) => Promise<string | null>; // Returns transaction hash
+  loading: boolean;
+  error: Error | null;
+  txHash: string | null;
+}
+``` 

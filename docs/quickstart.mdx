@@ -1,0 +1,304 @@
+---
+title: 'Quickstart'
+description: 'Get up and running with Compound React in minutes'
+---
+
+This guide will help you quickly get started with Compound React by walking through a simple example of setting up the provider and using some basic hooks.
+
+## Basic Setup
+
+First, make sure you have installed Compound React as described in the [Installation](/installation) guide.
+
+### Setting Up the Provider
+
+To use the hooks provided by Compound React, you need to wrap your application with the `CompoundProvider` component:
+
+```jsx
+import React from 'react';
+import { CompoundProvider } from 'compound-react';
+import { providers } from 'ethers';
+
+function App() {
+  // Create an Ethereum provider
+  const provider = new providers.Web3Provider(window.ethereum);
+  
+  return (
+    <CompoundProvider provider={provider}>
+      <YourApp />
+    </CompoundProvider>
+  );
+}
+```
+
+### Connecting to a Specific Network
+
+You can specify which network to connect to by passing the `network` prop to the `CompoundProvider`:
+
+```jsx
+<CompoundProvider 
+  provider={provider}
+  network="base" // Connect to Base network
+>
+  <YourApp />
+</CompoundProvider>
+```
+
+### Connecting to a Specific Market
+
+You can also specify which market to connect to by passing the `market` prop:
+
+```jsx
+<CompoundProvider 
+  provider={provider}
+  network="base"
+  market="usdc" // Connect to the USDC market on Base
+>
+  <YourApp />
+</CompoundProvider>
+```
+
+## Using Hooks
+
+Once you have set up the provider, you can start using the hooks in your components.
+
+### Getting Asset Information
+
+To get information about an asset, you can use the `useGetAssetInfo` hook:
+
+```jsx
+import { useGetAssetInfo } from 'compound-react';
+
+function AssetInfo() {
+  const { data: usdcInfo, isLoading, error } = useGetAssetInfo('USDC');
+  
+  if (isLoading) return <div>Loading...</div>;
+  if (error) return <div>Error: {error.message}</div>;
+  
+  return (
+    <div>
+      <h2>USDC Information</h2>
+      <p>Symbol: {usdcInfo.symbol}</p>
+      <p>Price: ${usdcInfo.price.toFixed(2)}</p>
+      <p>Supply APY: {usdcInfo.supplyApy.toFixed(2)}%</p>
+      <p>Borrow APY: {usdcInfo.borrowApy.toFixed(2)}%</p>
+    </div>
+  );
+}
+```
+
+### Getting User Account Information
+
+To get information about the user's account, you can use the `useGetAccountInfo` hook:
+
+```jsx
+import { useGetAccountInfo } from 'compound-react';
+
+function AccountInfo() {
+  const { data: accountInfo, isLoading, error } = useGetAccountInfo();
+  
+  if (isLoading) return <div>Loading...</div>;
+  if (error) return <div>Error: {error.message}</div>;
+  
+  return (
+    <div>
+      <h2>Account Information</h2>
+      <p>Address: {accountInfo.address}</p>
+      <p>Collateral Value: ${accountInfo.collateralValue.toFixed(2)}</p>
+      <p>Borrow Balance: ${accountInfo.borrowBalance.toFixed(2)}</p>
+      <p>Health Factor: {accountInfo.healthFactor.toFixed(2)}</p>
+    </div>
+  );
+}
+```
+
+### Supplying Collateral
+
+To supply collateral to the protocol, you can use the `useSupplyCollateral` hook:
+
+```jsx
+import { useSupplyCollateral } from 'compound-react';
+
+function SupplyCollateral() {
+  const { supply, isLoading, error } = useSupplyCollateral();
+  
+  const handleSupply = async () => {
+    try {
+      // Supply 100 USDC as collateral
+      await supply('USDC', '100');
+      alert('Successfully supplied collateral!');
+    } catch (err) {
+      alert(`Error: ${err.message}`);
+    }
+  };
+  
+  return (
+    <div>
+      <h2>Supply Collateral</h2>
+      <button onClick={handleSupply} disabled={isLoading}>
+        {isLoading ? 'Supplying...' : 'Supply 100 USDC'}
+      </button>
+      {error && <p>Error: {error.message}</p>}
+    </div>
+  );
+}
+```
+
+## Using UI Components
+
+Compound React also provides a set of ready-to-use UI components that work seamlessly with the hooks. These components handle loading states, error handling, and data formatting for you.
+
+### Basic UI Component Example
+
+Here's a simple example of using the `AssetInfoCard` and `InterestRateDisplay` components:
+
+```jsx
+import React from 'react';
+import { 
+  CompoundProvider, 
+  AssetInfoCard, 
+  InterestRateDisplay 
+} from 'compound-react';
+import { providers } from 'ethers';
+
+function App() {
+  // Create an Ethereum provider
+  const provider = new providers.Web3Provider(window.ethereum);
+  
+  return (
+    <CompoundProvider provider={provider} chainId={1}>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4">
+        <AssetInfoCard assetIndex={0} />
+        <InterestRateDisplay />
+      </div>
+    </CompoundProvider>
+  );
+}
+```
+
+### Using the Dashboard Component
+
+For a more comprehensive UI, you can use the `CompoundDashboard` component which combines multiple components into a tabbed interface:
+
+```jsx
+import React from 'react';
+import { 
+  CompoundProvider, 
+  CompoundDashboard 
+} from 'compound-react';
+import { providers } from 'ethers';
+
+function App() {
+  // Create an Ethereum provider
+  const provider = new providers.Web3Provider(window.ethereum);
+  const userAddress = "0x..."; // The user's Ethereum address
+  
+  return (
+    <CompoundProvider provider={provider} chainId={1}>
+      <CompoundDashboard 
+        userAddress={userAddress}
+        baseAssetSymbol="USDC"
+        baseAssetDecimals={6}
+      />
+    </CompoundProvider>
+  );
+}
+```
+
+The dashboard includes tabs for:
+- Overview (position summary, interest rates, market stats)
+- Supply & Borrow
+- Assets
+- Transaction History
+
+### Customizing Components
+
+All UI components accept a `className` prop that allows you to customize their appearance using Tailwind CSS classes:
+
+```jsx
+<AssetInfoCard 
+  assetIndex={0} 
+  className="bg-blue-50 border-blue-200 dark:bg-blue-900 dark:border-blue-800"
+/>
+```
+
+For more information on customizing the components, see the [UI Components](/components/overview) section.
+
+## Complete Example
+
+Here's a complete example that combines all of the above:
+
+```jsx
+import React from 'react';
+import { CompoundProvider, useGetAssetInfo, useGetAccountInfo, useSupplyCollateral } from 'compound-react';
+import { providers } from 'ethers';
+
+function App() {
+  const provider = new providers.Web3Provider(window.ethereum);
+  
+  return (
+    <CompoundProvider provider={provider}>
+      <Dashboard />
+    </CompoundProvider>
+  );
+}
+
+function Dashboard() {
+  const { data: usdcInfo, isLoading: isLoadingAsset } = useGetAssetInfo('USDC');
+  const { data: accountInfo, isLoading: isLoadingAccount } = useGetAccountInfo();
+  const { supply, isLoading: isSupplying } = useSupplyCollateral();
+  
+  const handleSupply = async () => {
+    try {
+      await supply('USDC', '100');
+      alert('Successfully supplied collateral!');
+    } catch (err) {
+      alert(`Error: ${err.message}`);
+    }
+  };
+  
+  if (isLoadingAsset || isLoadingAccount) return <div>Loading...</div>;
+  
+  return (
+    <div>
+      <h1>Compound III Dashboard</h1>
+      
+      <div>
+        <h2>USDC Information</h2>
+        {usdcInfo && (
+          <>
+            <p>Symbol: {usdcInfo.symbol}</p>
+            <p>Price: ${usdcInfo.price.toFixed(2)}</p>
+            <p>Supply APY: {usdcInfo.supplyApy.toFixed(2)}%</p>
+            <p>Borrow APY: {usdcInfo.borrowApy.toFixed(2)}%</p>
+          </>
+        )}
+      </div>
+      
+      <div>
+        <h2>Account Information</h2>
+        {accountInfo && (
+          <>
+            <p>Address: {accountInfo.address}</p>
+            <p>Collateral Value: ${accountInfo.collateralValue.toFixed(2)}</p>
+            <p>Borrow Balance: ${accountInfo.borrowBalance.toFixed(2)}</p>
+            <p>Health Factor: {accountInfo.healthFactor.toFixed(2)}</p>
+          </>
+        )}
+      </div>
+      
+      <div>
+        <h2>Supply Collateral</h2>
+        <button onClick={handleSupply} disabled={isSupplying}>
+          {isSupplying ? 'Supplying...' : 'Supply 100 USDC'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+export default App;
+```
+
+## Next Steps
+
+Now that you have a basic understanding of how to use Compound React, you can explore the [Hooks](/hooks/overview) section to learn about all the available hooks and how to use them in your application. 

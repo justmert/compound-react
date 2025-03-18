@@ -1,0 +1,94 @@
+---
+title: 'Market Stats'
+description: 'Component for displaying market statistics for Compound III'
+---
+
+The `MarketStats` component displays key statistics about a Compound III market, including total supply, total borrow, utilization rate, and reserve factor.
+
+## Usage
+
+```jsx
+import { MarketStats } from 'compound-react';
+import { providers } from 'ethers';
+
+function MyComponent() {
+  // Create an Ethereum provider
+  const provider = new providers.Web3Provider(window.ethereum);
+  
+  return (
+    <MarketStats 
+      provider={provider}
+      chainId={1} // Ethereum Mainnet
+    />
+  );
+}
+```
+
+## Props
+
+| Prop | Type | Description |
+| ---- | ---- | ----------- |
+| `provider` | `Provider` | The Ethereum provider to use for fetching data |
+| `chainId` | `number` | The chain ID of the network to connect to |
+| `baseAssetSymbol` | `string` | Optional symbol of the base asset (e.g., "USDC") |
+| `baseAssetDecimals` | `number` | Optional decimals of the base asset (e.g., 6 for USDC) |
+| `className` | `string` | Optional CSS class name to apply to the component |
+| `onRefresh` | `() => void` | Optional callback function to call when the refresh button is clicked |
+
+## Example
+
+```jsx
+<MarketStats 
+  provider={provider}
+  chainId={1}
+  baseAssetSymbol="USDC"
+  baseAssetDecimals={6}
+  className="max-w-lg mx-auto"
+  onRefresh={() => console.log('Market stats refreshed')}
+/>
+```
+
+## Displayed Information
+
+The component displays the following market statistics:
+
+- **Total Supply**: The total value of all assets supplied to the protocol
+- **Total Borrow**: The total value of all assets borrowed from the protocol
+- **Utilization Rate**: The percentage of supplied assets that are currently borrowed
+- **Reserve Factor**: The percentage of interest that goes to the protocol reserves
+- **Supply APY**: The annual percentage yield for suppliers
+- **Borrow APY**: The annual percentage yield for borrowers
+- **Market Address**: The address of the Compound III market contract
+- **Base Asset**: The symbol and address of the base asset
+
+## Charts and Visualizations
+
+The component includes visual elements to help users understand the market:
+
+- **Utilization Chart**: A visual representation of the utilization rate
+- **Supply/Borrow Distribution**: A breakdown of the supply and borrow amounts
+
+## Loading and Error States
+
+The component handles loading and error states automatically:
+
+- While data is being fetched, a loading indicator is displayed
+- If an error occurs during data fetching, an error message is displayed
+
+## Customization
+
+You can customize the appearance of the component using the `className` prop:
+
+```jsx
+<MarketStats 
+  provider={provider}
+  chainId={1}
+  className="bg-gray-50 p-6 rounded-xl shadow-md dark:bg-gray-800"
+/>
+```
+
+## Related Components
+
+- [InterestRateDisplay](/components/interest-rate-display) - For displaying interest rates
+- [UserPositionSummary](/components/user-position-summary) - For displaying a user's position
+- [AssetInfoCard](/components/asset-info-card) - For displaying information about a specific asset

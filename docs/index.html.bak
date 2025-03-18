@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Compound React Documentation</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+      line-height: 1.6;
+      color: #333;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    header {
+      display: flex;
+      align-items: center;
+      margin-bottom: 30px;
+    }
+    header img {
+      height: 40px;
+      margin-right: 20px;
+    }
+    h1 {
+      color: #00D395;
+    }
+    h2 {
+      margin-top: 30px;
+      border-bottom: 1px solid #eee;
+      padding-bottom: 10px;
+    }
+    ul {
+      padding-left: 20px;
+    }
+    li {
+      margin-bottom: 8px;
+    }
+    .file-tree {
+      background-color: #f5f5f5;
+      padding: 20px;
+      border-radius: 5px;
+      font-family: monospace;
+      white-space: pre;
+      overflow-x: auto;
+    }
+    .note {
+      background-color: #f0f9ff;
+      border-left: 4px solid #00D395;
+      padding: 15px;
+      margin: 20px 0;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <img src="favicon.svg" alt="Compound React Logo">
+    <h1>Compound React Documentation</h1>
+  </header>
+
+  <div class="note">
+    <strong>Note:</strong> This is a temporary preview page. The full documentation will be available when deployed with Mintlify.
+  </div>
+
+  <h2>Documentation Structure</h2>
+  <p>The documentation is organized as follows:</p>
+  <ul>
+    <li><strong>Getting Started</strong>: Introduction, installation, and quickstart guides</li>
+    <li><strong>Core Concepts</strong>: Information about the Compound protocol and supported networks/markets</li>
+    <li><strong>Hooks</strong>: Documentation for all the hooks provided by the library</li>
+    <li><strong>API Reference</strong>: Detailed API reference for the library</li>
+    <li><strong>Examples</strong>: Example code snippets and use cases</li>
+  </ul>
+
+  <h2>File Structure</h2>
+  <div class="file-tree">
+docs/
+├── .gitignore
+├── README.md
+├── favicon.svg
+├── index.html
+├── installation.mdx
+├── introduction.mdx
+├── mintlify.json
+├── package.json
+├── quickstart.mdx
+├── api-reference/
+│   └── overview.mdx
+├── concepts/
+│   ├── compound-protocol.mdx
+│   └── networks-markets.mdx
+├── examples/
+│   ├── liquidation.mdx
+│   ├── overview.mdx
+│   └── supply-borrow.mdx
+├── hooks/
+│   ├── account/
+│   │   └── overview.mdx
+│   └── overview.mdx
+└── logo/
+    ├── dark.svg
+    └── light.svg
+  </div>
+
+  <h2>Deployment Instructions</h2>
+  <p>To deploy this documentation with Mintlify:</p>
+  <ol>
+    <li>Push this documentation to your GitHub repository</li>
+    <li>Connect your repository to Mintlify through their dashboard</li>
+    <li>Configure your custom domain (if desired)</li>
+    <li>Mintlify will automatically build and deploy your documentation</li>
+  </ol>
+
+  <h2>Local Development</h2>
+  <p>To run this documentation locally:</p>
+  <ol>
+    <li>Install dependencies: <code>npm install</code></li>
+    <li>Start the preview server: <code>npm start</code></li>
+    <li>This will open a simple preview of the documentation structure</li>
+    <li>For the full Mintlify experience, you'll need to use their CLI with a compatible Node.js version (v18.17.0 or later)</li>
+  </ol>
+
+  <div class="note">
+    <p><strong>Mintlify CLI Error:</strong> If you're seeing an error with the Mintlify CLI related to the sharp package, you need to upgrade your Node.js version to v18.17.0 or later. You can use nvm to manage multiple Node.js versions:</p>
+    <pre>
+nvm install 18.17.0
+nvm use 18.17.0
+npm install -g mintlify
+mintlify dev
+    </pre>
+  </div>
+</body>
+</html> 

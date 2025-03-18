@@ -1,0 +1,68 @@
+---
+title: 'Interest Rate Display'
+description: 'Display current supply and borrow interest rates'
+---
+
+The `InterestRateDisplay` component shows the current supply and borrow interest rates along with the utilization rate for the Compound III protocol.
+
+## Usage
+
+```jsx
+import { InterestRateDisplay } from 'compound-react';
+import { providers } from 'ethers';
+
+function MyComponent() {
+  // Create an Ethereum provider
+  const provider = new providers.Web3Provider(window.ethereum);
+  
+  // Create a CometClient instance
+  const client = new CometClient({
+    provider,
+    chainId: 1, // Ethereum Mainnet
+  });
+  
+  return (
+    <InterestRateDisplay 
+      client={client}
+      onRefresh={() => console.log('Interest rates refreshed')}
+    />
+  );
+}
+```
+
+## Props
+
+| Prop | Type | Description |
+| ---- | ---- | ----------- |
+| `client` | `CometClient \| null` | The CometClient instance to use for fetching data |
+| `className` | `string` | Optional CSS class name to apply to the component |
+| `onRefresh` | `() => void` | Optional callback function to call when the refresh button is clicked |
+
+## Example
+
+```jsx
+<InterestRateDisplay 
+  client={client}
+  className="max-w-lg mx-auto"
+  onRefresh={() => console.log('Interest rates refreshed')}
+/>
+```
+
+## Displayed Information
+
+The component displays the following information:
+
+- Supply APY (Annual Percentage Yield)
+- Borrow APY (Annual Percentage Yield)
+- Utilization rate
+
+## Loading and Error States
+
+The component handles loading and error states automatically:
+
+- While data is being fetched, a loading indicator is displayed
+- If an error occurs during data fetching, an error message is displayed
+
+## Related Components
+
+- [MarketStats](/components/market-stats) - Displays more detailed market statistics

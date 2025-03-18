@@ -1,0 +1,87 @@
+---
+title: 'Asset Info Card'
+description: 'Display detailed information about a collateral asset'
+---
+
+The `AssetInfoCard` component displays detailed information about a collateral asset in the Compound III protocol, including collateral factors, supply caps, and other important parameters.
+
+## Usage
+
+```jsx
+import { AssetInfoCard } from 'compound-react';
+import { providers } from 'ethers';
+
+function MyComponent() {
+  // Create an Ethereum provider
+  const provider = new providers.Web3Provider(window.ethereum);
+  
+  // Create a CometClient instance
+  const client = new CometClient({
+    provider,
+    chainId: 1, // Ethereum Mainnet
+  });
+  
+  return (
+    <AssetInfoCard 
+      client={client}
+      assetIndex={0} // The index of the asset in the protocol
+      onRefresh={() => console.log('Asset info refreshed')}
+    />
+  );
+}
+```
+
+## Props
+
+| Prop | Type | Description |
+| ---- | ---- | ----------- |
+| `client` | `CometClient \| null` | The CometClient instance to use for fetching data |
+| `assetIndex` | `number` | The index of the asset in the protocol |
+| `className` | `string` | Optional CSS class name to apply to the component |
+| `onRefresh` | `() => void` | Optional callback function to call when the refresh button is clicked |
+
+## Example
+
+```jsx
+<AssetInfoCard 
+  client={client}
+  assetIndex={0}
+  className="max-w-lg mx-auto"
+  onRefresh={() => console.log('Asset info refreshed')}
+/>
+```
+
+## Displayed Information
+
+The component displays the following information about the asset:
+
+- Asset address
+- Price feed address
+- Borrow collateral factor
+- Liquidate collateral factor
+- Liquidation factor
+- Supply cap
+
+## Loading and Error States
+
+The component handles loading and error states automatically:
+
+- While data is being fetched, a loading indicator is displayed
+- If an error occurs during data fetching, an error message is displayed
+- If no asset information is available, a message is displayed
+
+## Customization
+
+You can customize the appearance of the component using the `className` prop:
+
+```jsx
+<AssetInfoCard 
+  client={client}
+  assetIndex={0}
+  className="bg-gray-50 border-gray-200 dark:bg-gray-800 dark:border-gray-700"
+/>
+```
+
+## Related Components
+
+- [AssetSelector](/components/asset-selector) - For selecting assets from the protocol 

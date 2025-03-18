@@ -1,0 +1,126 @@
+---
+title: 'Styling Guide'
+description: 'Customizing the appearance of Compound React UI components'
+---
+
+The Compound React UI components are built with [shadcn/ui](https://ui.shadcn.com/) and [Tailwind CSS](https://tailwindcss.com/), making them highly customizable while maintaining a consistent look and feel.
+
+## Basic Customization
+
+All components accept a `className` prop that allows you to add custom Tailwind CSS classes:
+
+```jsx
+import { AssetInfoCard } from 'compound-react';
+
+function MyComponent() {
+  return (
+    <AssetInfoCard 
+      assetIndex={0} 
+      className="bg-blue-50 border-blue-200 rounded-xl shadow-lg"
+    />
+  );
+}
+```
+
+## Theme Customization
+
+The components use CSS variables for theming, following the shadcn/ui convention. You can customize these variables in your global CSS file:
+
+```css
+:root {
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --destructive-foreground: oklch(0.577 0.245 27.325);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.708 0 0);
+  --radius: 0.625rem;
+}
+
+.dark {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.145 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  /* ... other dark mode variables */
+}
+```
+
+## Compound-Specific Styling
+
+To match the Compound Finance brand, you might want to use the following color scheme:
+
+```css
+:root {
+  --primary: #00D395; /* Compound green */
+  --primary-foreground: #FFFFFF;
+  --secondary: #657786;
+  --secondary-foreground: #FFFFFF;
+  /* ... other variables */
+}
+```
+
+## Component-Specific Styling
+
+Each component has specific parts that can be styled. Here are some examples:
+
+### Cards
+
+Components like `Asset Info Card`, `User Position Summary`, and others use the Card component internally:
+
+```jsx
+<Card>
+  <CardHeader>
+    <CardTitle>Title</CardTitle>
+  </CardHeader>
+  <CardContent>
+    {/* Content */}
+  </CardContent>
+  <CardFooter>
+    {/* Footer */}
+  </CardFooter>
+</Card>
+```
+
+You can target these elements with custom classes:
+
+```jsx
+<AssetInfoCard 
+  assetIndex={0} 
+  className="[&_.card-header]:bg-primary [&_.card-title]:text-white"
+/>
+```
+
+### Buttons
+
+The `Button` component is used throughout the UI components and can be customized with variants:
+
+```jsx
+<Button variant="outline">Outline Button</Button>
+<Button variant="destructive">Destructive Button</Button>
+<Button variant="ghost">Ghost Button</Button>
+```
+
+## Using with Tailwind CSS
+
+To use these components with Tailwind CSS, make sure you have Tailwind CSS installed and configured in your project. You'll need the following plugins:
+
+- `tailwindcss-animate`
+- `class-variance-authority`
+- `clsx`
+- `tailwind-merge`
+
+For a complete setup guide, see the [shadcn/ui installation guide](https://ui.shadcn.com/docs/installation). 

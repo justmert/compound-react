@@ -1,0 +1,546 @@
+---
+title: 'Liquidation Example'
+description: 'A complete example of a liquidation dashboard using Compound React'
+---
+
+This example demonstrates how to build a liquidation dashboard using Compound React. The dashboard allows users to:
+
+1. View accounts that can be liquidated
+2. Liquidate unhealthy positions
+3. View liquidation history
+
+## Complete Example
+
+```jsx
+import React, { useState, useEffect } from 'react';
+import { 
+  CompoundProvider, 
+  useGetLiquidatableAccounts,
+  useLiquidate,
+  useGetAccountInfo,
+  useGetAssetInfo,
+  useApprove,
+  useGetAllowance
+} from 'compound-react';
+import { providers } from 'ethers';
+
+function App() {
+  const provider = new providers.Web3Provider(window.ethereum);
+  
+  return (
+    <CompoundProvider provider={provider}>
+      <LiquidationDashboard />
+    </CompoundProvider>
+  );
+}
+
+function LiquidationDashboard() {
+  const [activeTab, setActiveTab] = useState('accounts');
+  
+  return (
+    <div className="dashboard">
+      <h1>Compound III Liquidation Dashboard</h1>
+      
+      <div className="tabs">
+        <button 
+          className={activeTab === 'accounts' ? 'active' : ''} 
+          onClick={() => setActiveTab('accounts')}
+        >
+          Liquidatable Accounts
+        </button>
+        <button 
+          className={activeTab === 'history' ? 'active' : ''} 
+          onClick={() => setActiveTab('history')}
+        >
+          Liquidation History
+        </button>
+      </div>
+      
+      <div className="tab-content">
+        {activeTab === 'accounts' && <LiquidatableAccountsTab />}
+        {activeTab === 'history' && <LiquidationHistoryTab />}
+      </div>
+    </div>
+  );
+}
+
+function LiquidatableAccountsTab() {
+  const { data: accounts, isLoading, error, refetch } = useGetLiquidatableAccounts();
+  const [selectedAccount, setSelectedAccount] = useState(null);
+  
+  useEffect(() => {
+    // Refresh the list of liquidatable accounts every 30 seconds
+    const interval = setInterval(() => {
+      refetch();
+    }, 30000);
+    
+    return () => clearInterval(interval);
+  }, [refetch]);
+  
+  if (isLoading) return <div>Loading liquidatable accounts...</div>;
+  if (error) return <div>Error: {error.message}</div>;
+  
+  return (
+    <div>
+      <div className="header-actions">
+        <h2>Liquidatable Accounts</h2>
+        <button onClick={refetch}>Refresh</button>
+      </div>
+      
+      {accounts.length === 0 ? (
+        <p>No accounts available for liquidation at this time.</p>
+      ) : (
+        <>
+          <table className="accounts-table">
+            <thead>
+              <tr>
+                <th>Address</th>
+                <th>Health Factor</th>
+                <th>Collateral Value</th>
+                <th>Borrow Balance</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {accounts.map((account) => (
+                <tr key={account.address}>
+                  <td>{account.address}</td>
+                  <td className="health-factor">{account.healthFactor.toFixed(2)}</td>
+                  <td>${account.collateralValue.toFixed(2)}</td>
+                  <td>${account.borrowBalance.toFixed(2)}</td>
+                  <td>
+                    <button 
+                      onClick={() => setSelectedAccount(account)}
+                      className="liquidate-button"
+                    >
+                      Liquidate
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          
+          {selectedAccount && (
+            <LiquidationModal 
+              account={selectedAccount} 
+              onClose={() => setSelectedAccount(null)}
+              onLiquidationComplete={refetch}
+            />
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+function LiquidationModal({ account, onClose, onLiquidationComplete }) {
+  const { data: accountInfo, isLoading: isLoadingAccount } = useGetAccountInfo(account.address);
+  const [selectedAsset, setSelectedAsset] = useState('');
+  const [repayAmount, setRepayAmount] = useState('');
+  
+  const { data: allowance, isLoading: isLoadingAllowance, refetch: refetchAllowance } = useGetAllowance('USDC');
+  const { approve, isLoading: isApproving } = useApprove();
+  const { liquidate, isLoading: isLiquidating } = useLiquidate();
+  
+  const handleApprove = async () => {
+    try {
+      await approve('USDC');
+      alert('Successfully approved USDC!');
+      refetchAllowance();
+    } catch (err) {
+      alert(`Error: ${err.message}`);
+    }
+  };
+  
+  const handleLiquidate = async () => {
+    try {
+      await liquidate(account.address, selectedAsset, repayAmount);
+      alert('Successfully liquidated position!');
+      onLiquidationComplete();
+      onClose();
+    } catch (err) {
+      alert(`Error: ${err.message}`);
+    }
+  };
+  
+  if (isLoadingAccount) return <div className="modal">Loading account details...</div>;
+  
+  const needsApproval = allowance && allowance.isZero();
+  
+  return (
+    <div className="modal-overlay">
+      <div className="modal">
+        <div className="modal-header">
+          <h3>Liquidate Position</h3>
+          <button onClick={onClose} className="close-button">×</button>
+        </div>
+        
+        <div className="modal-content">
+          <div className="account-details">
+            <p><strong>Address:</strong> {account.address}</p>
+            <p><strong>Health Factor:</strong> {account.healthFactor.toFixed(2)}</p>
+            <p><strong>Collateral Value:</strong> ${account.collateralValue.toFixed(2)}</p>
+            <p><strong>Borrow Balance:</strong> ${account.borrowBalance.toFixed(2)}</p>
+          </div>
+          
+          <h4>Collateral Assets</h4>
+          <table className="collateral-table">
+            <thead>
+              <tr>
+                <th>Asset</th>
+                <th>Balance</th>
+                <th>Value</th>
+              </tr>
+            </thead>
+            <tbody>
+              {Object.entries(accountInfo.collateralBalances).map(([asset, { symbol, balance, value }]) => (
+                <tr key={asset}>
+                  <td>{symbol}</td>
+                  <td>{balance.toFixed(4)}</td>
+                  <td>${value.toFixed(2)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          
+          <div className="form-group">
+            <label>
+              Collateral to Seize:
+              <select 
+                value={selectedAsset} 
+                onChange={(e) => setSelectedAsset(e.target.value)}
+              >
+                <option value="">Select an asset</option>
+                {Object.entries(accountInfo.collateralBalances).map(([asset, { symbol }]) => (
+                  <option key={asset} value={asset}>
+                    {symbol}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+          
+          <div className="form-group">
+            <label>
+              Amount to Repay (USDC):
+              <input
+                type="text"
+                value={repayAmount}
+                onChange={(e) => setRepayAmount(e.target.value)}
+                placeholder="0.0"
+              />
+            </label>
+          </div>
+          
+          {isLoadingAllowance ? (
+            <div>Checking allowance...</div>
+          ) : needsApproval ? (
+            <button 
+              onClick={handleApprove} 
+              disabled={isApproving}
+              className="approve-button"
+            >
+              {isApproving ? 'Approving...' : 'Approve USDC'}
+            </button>
+          ) : (
+            <button 
+              onClick={handleLiquidate} 
+              disabled={isLiquidating || !selectedAsset || !repayAmount}
+              className="liquidate-button"
+            >
+              {isLiquidating ? 'Liquidating...' : 'Liquidate Position'}
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function LiquidationHistoryTab() {
+  // In a real application, you would fetch liquidation history from a subgraph or API
+  const [liquidationHistory, setLiquidationHistory] = useState([
+    {
+      id: '1',
+      timestamp: new Date('2023-05-01T12:00:00Z'),
+      liquidator: '0x1234...5678',
+      borrower: '0xabcd...ef01',
+      repayAmount: 1000,
+      collateralAsset: 'WETH',
+      collateralAmount: 0.5,
+      txHash: '0x1234...5678'
+    },
+    {
+      id: '2',
+      timestamp: new Date('2023-05-02T14:30:00Z'),
+      liquidator: '0x1234...5678',
+      borrower: '0x2345...6789',
+      repayAmount: 2000,
+      collateralAsset: 'WBTC',
+      collateralAmount: 0.05,
+      txHash: '0x2345...6789'
+    }
+  ]);
+  
+  return (
+    <div>
+      <h2>Liquidation History</h2>
+      
+      {liquidationHistory.length === 0 ? (
+        <p>No liquidation history available.</p>
+      ) : (
+        <table className="history-table">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Liquidator</th>
+              <th>Borrower</th>
+              <th>Repay Amount</th>
+              <th>Collateral Asset</th>
+              <th>Collateral Amount</th>
+              <th>Transaction</th>
+            </tr>
+          </thead>
+          <tbody>
+            {liquidationHistory.map((liquidation) => (
+              <tr key={liquidation.id}>
+                <td>{liquidation.timestamp.toLocaleString()}</td>
+                <td>{liquidation.liquidator}</td>
+                <td>{liquidation.borrower}</td>
+                <td>${liquidation.repayAmount.toFixed(2)}</td>
+                <td>{liquidation.collateralAsset}</td>
+                <td>{liquidation.collateralAmount.toFixed(4)}</td>
+                <td>
+                  <a 
+                    href={`https://etherscan.io/tx/${liquidation.txHash}`} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                  >
+                    View
+                  </a>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </div>
+  );
+}
+
+export default App;
+```
+
+## CSS Styling
+
+Here's some basic CSS to style the liquidation dashboard:
+
+```css
+.dashboard {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 20px;
+  font-family: Arial, sans-serif;
+}
+
+h1 {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.tabs {
+  display: flex;
+  margin-bottom: 20px;
+  border-bottom: 1px solid #ccc;
+}
+
+.tabs button {
+  padding: 10px 20px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+.tabs button.active {
+  border-bottom: 2px solid #00D395;
+  color: #00D395;
+}
+
+.tab-content {
+  padding: 20px;
+  background-color: #f9f9f9;
+  border-radius: 5px;
+}
+
+.header-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.accounts-table,
+.history-table,
+.collateral-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 20px;
+}
+
+.accounts-table th,
+.accounts-table td,
+.history-table th,
+.history-table td,
+.collateral-table th,
+.collateral-table td {
+  padding: 10px;
+  text-align: left;
+  border-bottom: 1px solid #ddd;
+}
+
+.health-factor {
+  color: #ff4d4d;
+  font-weight: bold;
+}
+
+.liquidate-button {
+  background-color: #ff4d4d;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  padding: 5px 10px;
+  cursor: pointer;
+}
+
+.approve-button {
+  background-color: #00D395;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  padding: 10px 20px;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.modal {
+  background-color: white;
+  border-radius: 5px;
+  padding: 20px;
+  width: 80%;
+  max-width: 800px;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.close-button {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+}
+
+.account-details {
+  background-color: #f9f9f9;
+  padding: 15px;
+  border-radius: 5px;
+  margin-bottom: 20px;
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 5px;
+}
+
+.form-group input,
+.form-group select {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+}
+
+button {
+  padding: 10px 20px;
+  background-color: #00D395;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+button:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+```
+
+## Key Components
+
+### LiquidatableAccountsTab
+
+The `LiquidatableAccountsTab` component displays a list of accounts that can be liquidated. It includes:
+
+1. A table of liquidatable accounts with their health factors, collateral values, and borrow balances
+2. A button to refresh the list
+3. A button to open the liquidation modal for each account
+
+### LiquidationModal
+
+The `LiquidationModal` component allows users to liquidate an unhealthy position. It includes:
+
+1. Account details
+2. A table of collateral assets
+3. A dropdown to select the collateral asset to seize
+4. An input for the amount to repay
+5. Approval and liquidation buttons
+
+### LiquidationHistoryTab
+
+The `LiquidationHistoryTab` component displays a history of liquidations. In a real application, this data would be fetched from a subgraph or API.
+
+## How Liquidation Works
+
+When a user's position becomes unhealthy (i.e., their health factor falls below 1), their position can be liquidated by other users. The liquidation process involves:
+
+1. The liquidator repays a portion of the borrower's debt
+2. In return, the liquidator receives a portion of the borrower's collateral at a discount
+
+The liquidation discount is determined by the protocol and is typically around 8-10%. This provides an incentive for liquidators to help maintain the solvency of the protocol.
+
+## Next Steps
+
+This example demonstrates a basic liquidation dashboard. You can extend it with additional features such as:
+
+- Liquidation profitability calculator
+- Automatic liquidation bot
+- Historical liquidation data visualization
+- Multi-network support
+- Gas price optimization
+
+Check out the [Supply and Borrow](/examples/supply-borrow) example for a complete dashboard that allows users to supply collateral and borrow assets. 

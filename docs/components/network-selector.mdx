@@ -1,0 +1,101 @@
+---
+title: 'Network Selector'
+description: 'Component for selecting supported networks in the Compound III protocol'
+---
+
+The `NetworkSelector` component provides a user-friendly dropdown interface for selecting networks supported by the Compound III protocol. It displays network icons, names, and handles network switching.
+
+## Usage
+
+```jsx
+import { NetworkSelector } from 'compound-react';
+import { providers } from 'ethers';
+
+function MyComponent() {
+  // Create an Ethereum provider
+  const provider = new providers.Web3Provider(window.ethereum);
+  
+  return (
+    <NetworkSelector 
+      provider={provider}
+      value={1} // Ethereum Mainnet
+      onChange={(chainId) => console.log(`Selected network: ${chainId}`)}
+    />
+  );
+}
+```
+
+## Props
+
+| Prop | Type | Description |
+| ---- | ---- | ----------- |
+| `provider` | `Provider` | The Ethereum provider to use for network switching |
+| `value` | `number` | The currently selected chain ID |
+| `onChange` | `(chainId: number) => void` | Callback function called when a network is selected |
+| `switchNetwork` | `boolean` | Whether to automatically switch networks when selected (default: true) |
+| `showTestnets` | `boolean` | Whether to show testnet networks (default: false) |
+| `className` | `string` | Optional CSS class name to apply to the component |
+| `disabled` | `boolean` | Whether the selector is disabled (default: false) |
+
+## Example
+
+```jsx
+<NetworkSelector 
+  provider={provider}
+  value={selectedChainId}
+  onChange={setSelectedChainId}
+  switchNetwork={true}
+  showTestnets={false}
+  className="w-full"
+/>
+```
+
+## Features
+
+The `NetworkSelector` component includes the following features:
+
+- **Network List**: Displays a list of supported networks
+- **Network Icons**: Shows icons for each network
+- **Network Names**: Displays the name for each network (e.g., Ethereum, Base)
+- **Network Switching**: Optionally switches the connected wallet to the selected network
+- **Testnet Support**: Optionally shows testnet networks
+- **Current Network Indicator**: Highlights the currently connected network
+- **Keyboard Navigation**: Supports keyboard navigation for accessibility
+- **Loading States**: Shows loading indicators during network switching
+- **Error Handling**: Displays user-friendly error messages
+
+## Supported Networks
+
+The component supports all networks where Compound III is deployed, including:
+
+- Ethereum Mainnet (Chain ID: 1)
+- Base (Chain ID: 8453)
+- Arbitrum (Chain ID: 42161)
+- Polygon (Chain ID: 137)
+- And their corresponding testnets when `showTestnets` is enabled
+
+## Loading and Error States
+
+The component handles loading and error states automatically:
+
+- While switching networks, a loading indicator is displayed
+- If an error occurs during network switching, an error message is displayed
+- If the user rejects the network switch, an appropriate message is shown
+
+## Customization
+
+You can customize the appearance of the component using the `className` prop:
+
+```jsx
+<NetworkSelector 
+  provider={provider}
+  value={selectedChainId}
+  onChange={setSelectedChainId}
+  className="bg-gray-50 border-gray-200 rounded-lg dark:bg-gray-800 dark:border-gray-700"
+/>
+```
+
+## Related Components
+
+- [AssetSelector](/components/asset-selector) - For selecting assets from the protocol
+- [CompoundDashboard](/components/compound-dashboard) - Uses NetworkSelector for network switching

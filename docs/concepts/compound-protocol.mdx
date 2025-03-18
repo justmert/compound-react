@@ -1,0 +1,112 @@
+---
+title: 'Compound Protocol'
+description: 'Understanding the Compound III (Comet) protocol'
+---
+
+Compound III, also known as Comet, is the latest version of the Compound protocol. This page provides an overview of how Compound III works and its key concepts.
+
+## What is Compound III?
+
+Compound III is a decentralized lending protocol that allows users to supply assets as collateral and borrow a single base asset. It's a significant evolution from previous versions of Compound, with a focus on capital efficiency, risk management, and user experience.
+
+## Key Features of Compound III
+
+### Single Borrowable Asset
+
+Unlike previous versions of Compound, Compound III focuses on a single borrowable asset per deployment (e.g., USDC on Ethereum). This design choice allows for:
+
+- Simplified risk management
+- Improved capital efficiency
+- Better user experience
+
+### Collateral Assets
+
+While there is only one borrowable asset, users can supply multiple types of assets as collateral. Each collateral asset has specific parameters:
+
+- **Collateral Factor**: The percentage of the collateral's value that can be borrowed
+- **Liquidation Factor**: The threshold at which a position becomes eligible for liquidation
+- **Liquidation Penalty**: The discount given to liquidators when purchasing collateral
+
+### Account Management
+
+Compound III introduces several new account management features:
+
+- **Collateral Assets**: Users can supply multiple assets as collateral
+- **Borrowing**: Users can borrow the base asset against their collateral
+- **Health Factor**: A measure of the safety of a user's position
+- **Liquidation**: The process of repaying a user's debt in exchange for their collateral
+
+## How Compound III Works
+
+### Supplying Collateral
+
+Users can supply assets as collateral to the protocol. These assets are then used to secure borrowing positions.
+
+```jsx
+// Example of supplying collateral using Compound React
+const { supply } = useSupplyCollateral();
+await supply('WETH', '1.0'); // Supply 1.0 WETH as collateral
+```
+
+### Borrowing
+
+Users can borrow the base asset against their collateral up to a certain limit determined by the collateral factor.
+
+```jsx
+// Example of borrowing using Compound React
+const { borrow } = useBorrow();
+await borrow('1000'); // Borrow 1000 USDC
+```
+
+### Repaying
+
+Users can repay their borrowed amount at any time.
+
+```jsx
+// Example of repaying using Compound React
+const { repay } = useRepay();
+await repay('500'); // Repay 500 USDC
+```
+
+### Withdrawing Collateral
+
+Users can withdraw their collateral as long as they maintain a healthy position.
+
+```jsx
+// Example of withdrawing collateral using Compound React
+const { withdraw } = useWithdrawCollateral();
+await withdraw('WETH', '0.5'); // Withdraw 0.5 WETH
+```
+
+### Liquidation
+
+If a user's position becomes unhealthy (i.e., their health factor falls below 1), their position can be liquidated by other users.
+
+```jsx
+// Example of liquidating a position using Compound React
+const { liquidate } = useLiquidate();
+await liquidate('0x1234...', 'WETH', '1000'); // Liquidate 1000 USDC of debt, taking WETH as collateral
+```
+
+## Interest Rates
+
+Compound III uses a dynamic interest rate model that adjusts based on the utilization of the protocol:
+
+- **Supply APY**: The interest rate earned by suppliers of collateral
+- **Borrow APY**: The interest rate paid by borrowers
+
+The interest rates are determined by the utilization rate of the protocol, which is the ratio of borrowed assets to supplied assets.
+
+## Protocol Rewards
+
+Compound III may distribute rewards to users who interact with the protocol. These rewards can be claimed by users and are typically distributed in the form of tokens.
+
+```jsx
+// Example of claiming rewards using Compound React
+const { claim } = useClaimRewards();
+await claim(); // Claim all available rewards
+```
+
+## Next Steps
+
+Now that you understand the basics of Compound III, you can learn more about the specific [Networks and Markets](/concepts/networks-markets) supported by the protocol. 

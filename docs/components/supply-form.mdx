@@ -1,0 +1,96 @@
+---
+title: 'Supply Form'
+description: 'Form component for supplying assets to the Compound III protocol'
+---
+
+The `SupplyForm` component provides a user-friendly interface for supplying assets to the Compound III protocol. It handles input validation, balance checking, and transaction submission.
+
+## Usage
+
+```jsx
+import { SupplyForm } from 'compound-react';
+import { providers } from 'ethers';
+
+function MyComponent() {
+  // Create an Ethereum provider
+  const provider = new providers.Web3Provider(window.ethereum);
+  
+  return (
+    <SupplyForm 
+      provider={provider}
+      chainId={1} // Ethereum Mainnet
+      onSuccess={(txHash) => console.log(`Supply successful: ${txHash}`)}
+    />
+  );
+}
+```
+
+## Props
+
+| Prop | Type | Description |
+| ---- | ---- | ----------- |
+| `provider` | `Provider` | The Ethereum provider to use for transactions |
+| `chainId` | `number` | The chain ID of the network to connect to |
+| `defaultAsset` | `string` | Optional default asset to select in the form |
+| `defaultAmount` | `string` | Optional default amount to pre-fill in the form |
+| `className` | `string` | Optional CSS class name to apply to the component |
+| `onSuccess` | `(txHash: string) => void` | Optional callback function called when a transaction is successful |
+| `onError` | `(error: Error) => void` | Optional callback function called when an error occurs |
+
+## Example
+
+```jsx
+<SupplyForm 
+  provider={provider}
+  chainId={1}
+  defaultAsset="USDC"
+  defaultAmount="100"
+  className="max-w-md mx-auto"
+  onSuccess={(txHash) => {
+    console.log(`Supply successful: ${txHash}`);
+    // Show success notification, update UI, etc.
+  }}
+  onError={(error) => {
+    console.error(`Supply failed: ${error.message}`);
+    // Show error notification, etc.
+  }}
+/>
+```
+
+## Features
+
+The `SupplyForm` component includes the following features:
+
+- **Asset Selection**: Users can select which asset they want to supply
+- **Amount Input**: Users can enter the amount they want to supply
+- **Balance Display**: Shows the user's current balance of the selected asset
+- **Max Button**: Allows users to quickly set the maximum amount they can supply
+- **Validation**: Validates input to ensure it's within allowed limits
+- **Gas Estimation**: Estimates gas costs for the transaction
+- **Transaction Submission**: Handles submitting the transaction to the network
+- **Loading States**: Shows loading indicators during transaction processing
+- **Error Handling**: Displays user-friendly error messages
+
+## Loading and Error States
+
+The component handles loading and error states automatically:
+
+- While the transaction is being processed, a loading indicator is displayed
+- If an error occurs during the transaction, an error message is displayed
+
+## Customization
+
+You can customize the appearance of the component using the `className` prop:
+
+```jsx
+<SupplyForm 
+  provider={provider}
+  chainId={1}
+  className="bg-gray-50 p-6 rounded-xl shadow-md dark:bg-gray-800"
+/>
+```
+
+## Related Components
+
+- [WithdrawForm](/components/withdraw-form) - For withdrawing assets from the protocol
+- [AssetSelector](/components/asset-selector) - For selecting assets from the protocol

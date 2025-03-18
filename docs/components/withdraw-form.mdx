@@ -1,0 +1,99 @@
+---
+title: 'Withdraw Form'
+description: 'Form component for withdrawing assets from the Compound III protocol'
+---
+
+The `WithdrawForm` component provides a user-friendly interface for withdrawing supplied assets from the Compound III protocol. It handles input validation, balance checking, and transaction submission.
+
+## Usage
+
+```jsx
+import { WithdrawForm } from 'compound-react';
+import { providers } from 'ethers';
+
+function MyComponent() {
+  // Create an Ethereum provider
+  const provider = new providers.Web3Provider(window.ethereum);
+  
+  return (
+    <WithdrawForm 
+      provider={provider}
+      chainId={1} // Ethereum Mainnet
+      onSuccess={(txHash) => console.log(`Withdrawal successful: ${txHash}`)}
+    />
+  );
+}
+```
+
+## Props
+
+| Prop | Type | Description |
+| ---- | ---- | ----------- |
+| `provider` | `Provider` | The Ethereum provider to use for transactions |
+| `chainId` | `number` | The chain ID of the network to connect to |
+| `userAddress` | `string` | Optional user address to check balances for (defaults to connected wallet) |
+| `defaultAsset` | `string` | Optional default asset to select in the form |
+| `defaultAmount` | `string` | Optional default amount to pre-fill in the form |
+| `className` | `string` | Optional CSS class name to apply to the component |
+| `onSuccess` | `(txHash: string) => void` | Optional callback function called when a transaction is successful |
+| `onError` | `(error: Error) => void` | Optional callback function called when an error occurs |
+
+## Example
+
+```jsx
+<WithdrawForm 
+  provider={provider}
+  chainId={1}
+  defaultAsset="USDC"
+  className="max-w-md mx-auto"
+  onSuccess={(txHash) => {
+    console.log(`Withdrawal successful: ${txHash}`);
+    // Show success notification, update UI, etc.
+  }}
+  onError={(error) => {
+    console.error(`Withdrawal failed: ${error.message}`);
+    // Show error notification, etc.
+  }}
+/>
+```
+
+## Features
+
+The `WithdrawForm` component includes the following features:
+
+- **Asset Selection**: Users can select which asset they want to withdraw
+- **Amount Input**: Users can enter the amount they want to withdraw
+- **Balance Display**: Shows the user's current supplied balance of the selected asset
+- **Max Button**: Allows users to quickly set the maximum amount they can withdraw
+- **Validation**: Validates input to ensure it's within allowed limits and won't put the account at risk
+- **Health Factor Impact**: Shows how the withdrawal will affect the account's health factor
+- **Gas Estimation**: Estimates gas costs for the transaction
+- **Transaction Submission**: Handles submitting the transaction to the network
+- **Loading States**: Shows loading indicators during transaction processing
+- **Error Handling**: Displays user-friendly error messages
+
+## Loading and Error States
+
+The component handles loading and error states automatically:
+
+- While the transaction is being processed, a loading indicator is displayed
+- If an error occurs during the transaction, an error message is displayed
+- If the withdrawal would put the account at risk, a warning is displayed
+
+## Customization
+
+You can customize the appearance of the component using the `className` prop:
+
+```jsx
+<WithdrawForm 
+  provider={provider}
+  chainId={1}
+  className="bg-gray-50 p-6 rounded-xl shadow-md dark:bg-gray-800"
+/>
+```
+
+## Related Components
+
+- [SupplyForm](/components/supply-form) - For supplying assets to the protocol
+- [AssetSelector](/components/asset-selector) - For selecting assets from the protocol
+- [UserPositionSummary](/components/user-position-summary) - For displaying the user's current position

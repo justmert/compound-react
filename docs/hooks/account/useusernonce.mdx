@@ -1,0 +1,37 @@
+---
+title: 'useUserNonce'
+description: 'Get the current nonce for a user, used for signed transactions'
+---
+
+The `useUserNonce` hook retrieves the current nonce for a user, which is used for signed transactions.
+
+## Usage
+
+```jsx
+import { useUserNonce } from 'compound-react';
+
+function UserNonceDisplay({ accountAddress }) {
+  const { nonce, loading, error } = useUserNonce(null, accountAddress);
+  
+  if (loading) return <div>Loading...</div>;
+  if (error) return <div>Error: {error.message}</div>;
+  
+  return (
+    <div>
+      <h2>User Nonce</h2>
+      <p>Nonce: {nonce?.toString()}</p>
+    </div>
+  );
+}
+```
+
+## Return Value
+
+```typescript
+{
+  nonce: number | null;
+  loading: boolean;
+  error: Error | null;
+  refetch: () => Promise<number | null>;
+}
+``` 

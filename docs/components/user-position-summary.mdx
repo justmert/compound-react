@@ -1,0 +1,100 @@
+---
+title: 'UserPositionSummary'
+description: 'Component for displaying a summary of a user position in Compound III'
+---
+
+The `UserPositionSummary` component displays a comprehensive summary of a user's position in the Compound III protocol, including supplied assets, borrowed amount, and health factor.
+
+## Usage
+
+```jsx
+import { UserPositionSummary } from 'compound-react';
+import { providers } from 'ethers';
+
+function MyComponent() {
+  // Create an Ethereum provider
+  const provider = new providers.Web3Provider(window.ethereum);
+  
+  return (
+    <UserPositionSummary 
+      provider={provider}
+      chainId={1} // Ethereum Mainnet
+      userAddress="0x..." // The address to display the position for
+    />
+  );
+}
+```
+
+## Props
+
+| Prop | Type | Description |
+| ---- | ---- | ----------- |
+| `provider` | `Provider` | The Ethereum provider to use for fetching data |
+| `chainId` | `number` | The chain ID of the network to connect to |
+| `userAddress` | `string` | The address to display the position for (defaults to connected wallet) |
+| `baseAssetSymbol` | `string` | Optional symbol of the base asset (e.g., "USDC") |
+| `baseAssetDecimals` | `number` | Optional decimals of the base asset (e.g., 6 for USDC) |
+| `className` | `string` | Optional CSS class name to apply to the component |
+| `onRefresh` | `() => void` | Optional callback function to call when the refresh button is clicked |
+
+## Example
+
+```jsx
+<UserPositionSummary 
+  provider={provider}
+  chainId={1}
+  userAddress="0x..."
+  baseAssetSymbol="USDC"
+  baseAssetDecimals={6}
+  className="max-w-lg mx-auto"
+  onRefresh={() => console.log('Position refreshed')}
+/>
+```
+
+## Displayed Information
+
+The component displays the following information about the user's position:
+
+- **Total Supplied**: The total value of all supplied assets
+- **Total Borrowed**: The total amount borrowed
+- **Available to Borrow**: The remaining amount available to borrow
+- **Health Factor**: A measure of the position's safety (higher is better)
+- **Liquidation Threshold**: The point at which the position becomes eligible for liquidation
+- **Supplied Assets**: A breakdown of all supplied assets with their values
+- **Collateral Assets**: A breakdown of assets being used as collateral
+
+## Health Factor Indicator
+
+The component includes a visual health factor indicator that changes color based on the position's risk level:
+
+- **Green**: Safe position (health factor > 1.5)
+- **Yellow**: Moderate risk (health factor between 1.1 and 1.5)
+- **Orange**: High risk (health factor between 1.0 and 1.1)
+- **Red**: Danger of liquidation (health factor < 1.0)
+
+## Loading and Error States
+
+The component handles loading and error states automatically:
+
+- While data is being fetched, a loading indicator is displayed
+- If an error occurs during data fetching, an error message is displayed
+- If the user has no position, an appropriate message is shown
+
+## Customization
+
+You can customize the appearance of the component using the `className` prop:
+
+```jsx
+<UserPositionSummary 
+  provider={provider}
+  chainId={1}
+  userAddress="0x..."
+  className="bg-gray-50 p-6 rounded-xl shadow-md dark:bg-gray-800"
+/>
+```
+
+## Related Components
+
+- [MarketStats](/components/market-stats) - For displaying overall market statistics
+- [SupplyForm](/components/supply-form) - For supplying assets to the protocol
+- [WithdrawForm](/components/withdraw-form) - For withdrawing assets from the protocol

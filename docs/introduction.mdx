@@ -1,0 +1,82 @@
+---
+title: 'Introduction'
+description: 'React hooks library for interacting with Compound III (Comet)'
+---
+
+Welcome to the official documentation for the Compound React Hooks library, a comprehensive collection of React hooks and UI components designed to simplify interactions with the Compound III protocol across all supported networks and markets.
+
+## What is Compound React?
+
+Compound React is a library that provides a set of React hooks and UI components for interacting with the Compound III protocol. These hooks abstract away the complexity of directly interacting with smart contracts, allowing developers to easily integrate Compound III functionality into their React applications. The UI components provide ready-to-use interfaces built with shadcn/ui that work seamlessly with the hooks.
+
+## Key Features
+
+- **Easy Integration**: Simple hooks-based API that integrates seamlessly with React applications
+- **Ready-to-Use UI Components**: Beautiful, responsive UI components built with shadcn/ui
+- **Comprehensive Coverage**: Support for all Compound III functionality including supplying collateral, borrowing, liquidations, and more
+- **Multi-Network Support**: Works across all networks where Compound III is deployed
+- **TypeScript Support**: Full TypeScript support for improved developer experience
+- **Optimized Performance**: Efficient data fetching and caching strategies
+- **Customizable**: Flexible hooks and components that can be composed to build complex DeFi applications
+
+## Who is this for?
+
+This library is designed for:
+
+- **DeFi Developers**: Building applications that interact with Compound III
+- **Frontend Engineers**: Working on React applications that need to integrate with Compound III
+- **DApp Builders**: Creating user interfaces for Compound III functionality
+
+## Getting Started
+
+To get started with Compound React, check out the [Installation](/installation) and [Quickstart](/quickstart) guides.
+
+## Example Usage
+
+### Using Hooks
+
+```jsx
+import { useGetAssetInfo } from 'compound-react';
+
+function AssetInfoDisplay() {
+  // Get information about an asset
+  const { data: usdcInfo, isLoading, error } = useGetAssetInfo('USDC');
+  
+  if (isLoading) return <div>Loading...</div>;
+  if (error) return <div>Error: {error.message}</div>;
+  
+  return (
+    <div>
+      <h1>USDC Information</h1>
+      {usdcInfo && (
+        <div>
+          <p>Symbol: {usdcInfo.symbol}</p>
+          <p>Price: ${usdcInfo.price.toFixed(2)}</p>
+          <p>Decimals: {usdcInfo.decimals}</p>
+        </div>
+      )}
+    </div>
+  );
+}
+```
+
+### Using UI Components
+
+```jsx
+import { CompoundProvider, AssetInfoCard, UserPositionSummary } from 'compound-react';
+import { providers } from 'ethers';
+
+function App() {
+  // Create an Ethereum provider
+  const provider = new providers.Web3Provider(window.ethereum);
+  
+  return (
+    <CompoundProvider provider={provider} chainId={1}>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <UserPositionSummary userAddress="0x..." />
+        <AssetInfoCard assetIndex={0} />
+      </div>
+    </CompoundProvider>
+  );
+}
+``` 

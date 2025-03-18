@@ -1,0 +1,96 @@
+---
+title: 'Asset Selector'
+description: 'Component for selecting assets from the Compound III protocol'
+---
+
+The `AssetSelector` component provides a user-friendly dropdown interface for selecting assets available in the Compound III protocol. It displays asset icons, symbols, and optional balance information.
+
+## Usage
+
+```jsx
+import { AssetSelector } from 'compound-react';
+import { providers } from 'ethers';
+
+function MyComponent() {
+  // Create an Ethereum provider
+  const provider = new providers.Web3Provider(window.ethereum);
+  
+  return (
+    <AssetSelector 
+      provider={provider}
+      chainId={1} // Ethereum Mainnet
+      value="USDC"
+      onChange={(asset) => console.log(`Selected asset: ${asset}`)}
+    />
+  );
+}
+```
+
+## Props
+
+| Prop | Type | Description |
+| ---- | ---- | ----------- |
+| `provider` | `Provider` | The Ethereum provider to use for fetching asset data |
+| `chainId` | `number` | The chain ID of the network to connect to |
+| `value` | `string` | The currently selected asset symbol |
+| `onChange` | `(asset: string) => void` | Callback function called when an asset is selected |
+| `showBalances` | `boolean` | Whether to show user balances next to assets (default: false) |
+| `userAddress` | `string` | Optional user address to check balances for (defaults to connected wallet) |
+| `filterFn` | `(asset: AssetInfo) => boolean` | Optional function to filter which assets are displayed |
+| `className` | `string` | Optional CSS class name to apply to the component |
+| `disabled` | `boolean` | Whether the selector is disabled (default: false) |
+
+## Example
+
+```jsx
+<AssetSelector 
+  provider={provider}
+  chainId={1}
+  value={selectedAsset}
+  onChange={setSelectedAsset}
+  showBalances={true}
+  className="w-full"
+  filterFn={(asset) => asset.isCollateral} // Only show collateral assets
+/>
+```
+
+## Features
+
+The `AssetSelector` component includes the following features:
+
+- **Asset List**: Displays a list of available assets in the protocol
+- **Asset Icons**: Shows icons for each asset
+- **Asset Symbols**: Displays the symbol for each asset (e.g., USDC, ETH)
+- **User Balances**: Optionally shows the user's balance for each asset
+- **Search**: Allows users to search for assets by symbol or name
+- **Filtering**: Supports filtering assets based on custom criteria
+- **Keyboard Navigation**: Supports keyboard navigation for accessibility
+- **Loading States**: Shows loading indicators while fetching asset data
+- **Error Handling**: Displays user-friendly error messages
+
+## Loading and Error States
+
+The component handles loading and error states automatically:
+
+- While asset data is being fetched, a loading indicator is displayed
+- If an error occurs during data fetching, an error message is displayed
+
+## Customization
+
+You can customize the appearance of the component using the `className` prop:
+
+```jsx
+<AssetSelector 
+  provider={provider}
+  chainId={1}
+  value={selectedAsset}
+  onChange={setSelectedAsset}
+  className="bg-gray-50 border-gray-200 rounded-lg dark:bg-gray-800 dark:border-gray-700"
+/>
+```
+
+## Related Components
+
+- [SupplyForm](/components/supply-form) - Uses AssetSelector for selecting assets to supply
+- [WithdrawForm](/components/withdraw-form) - Uses AssetSelector for selecting assets to withdraw
+- [NetworkSelector](/components/network-selector) - For selecting supported networks

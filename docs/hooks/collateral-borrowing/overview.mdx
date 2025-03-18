@@ -1,0 +1,219 @@
+---
+title: 'Collateral and Borrowing'
+description: 'Hooks for managing collateral and borrowing on Compound III'
+---
+
+This section contains hooks for managing collateral and borrowing on Compound III.
+
+## Summary of Collateral and Borrowing Hooks
+
+- [useSupply](#usesupply): Allows users to supply base tokens to the protocol
+- [useWithdraw](#usewithdraw): Allows users to withdraw base tokens from the protocol
+- [useCollateralBalance](#usecollateralbalance): Retrieves the collateral balance of an account for a specific asset
+- [useIsBorrowCollateralized](#useisborrowcollateralized): Checks if an account has enough collateral for borrowing
+- [useBaseBorrowMin](#usebaseborrowmin): Retrieves the minimum borrow amount for the base asset
+
+## useSupply
+
+The `useSupply` hook allows users to supply base tokens to the Compound III protocol.
+
+### Usage
+
+```jsx
+import { useSupply } from 'compound-react';
+
+function SupplyComponent() {
+  const { supply, loading, error, txHash } = useSupply();
+  
+  const handleSupply = async () => {
+    // Supply 100 USDC to the protocol
+    const amount = ethers.utils.parseUnits('100', 6); // 100 USDC with 6 decimals
+    const tx = await supply(amount);
+    console.log('Supply transaction:', tx);
+  };
+  
+  return (
+    <div>
+      <button onClick={handleSupply} disabled={loading}>
+        {loading ? 'Supplying...' : 'Supply 100 USDC'}
+      </button>
+      {error && <p>Error: {error.message}</p>}
+      {txHash && <p>Transaction: {txHash}</p>}
+    </div>
+  );
+}
+```
+
+### Return Value
+
+```typescript
+{
+  supply: (amount: BigNumber) => Promise<string | null>; // Returns transaction hash
+  loading: boolean;
+  error: Error | null;
+  txHash: string | null;
+}
+```
+
+## useWithdraw
+
+The `useWithdraw` hook allows users to withdraw base tokens from the Compound III protocol.
+
+### Usage
+
+```jsx
+import { useWithdraw } from 'compound-react';
+
+function WithdrawComponent() {
+  const { withdraw, loading, error, txHash } = useWithdraw();
+  
+  const handleWithdraw = async () => {
+    // Withdraw 50 USDC (assuming USDC has 6 decimals)
+    const amount = ethers.utils.parseUnits('50', 6);
+    const tx = await withdraw(amount);
+    console.log('Withdraw transaction:', tx);
+  };
+  
+  return (
+    <div>
+      <button onClick={handleWithdraw} disabled={loading}>
+        {loading ? 'Withdrawing...' : 'Withdraw 50 USDC'}
+      </button>
+      {error && <p>Error: {error.message}</p>}
+      {txHash && <p>Transaction: {txHash}</p>}
+    </div>
+  );
+}
+```
+
+### Return Value
+
+```typescript
+{
+  withdraw: (amount: BigNumber) => Promise<string | null>; // Returns transaction hash
+  loading: boolean;
+  error: Error | null;
+  txHash: string | null;
+}
+```
+
+## useCollateralBalance
+
+The `useCollateralBalance` hook retrieves the collateral balance of an account for a specific asset.
+
+### Usage
+
+```jsx
+import { useCollateralBalance } from 'compound-react';
+
+function CollateralBalanceDisplay({ accountAddress, assetAddress }) {
+  const { 
+    balance, 
+    loading, 
+    error 
+  } = useCollateralBalance(null, accountAddress, assetAddress);
+  
+  if (loading) return <div>Loading...</div>;
+  if (error) return <div>Error: {error.message}</div>;
+  
+  return (
+    <div>
+      <h2>Collateral Balance</h2>
+      <p>Balance: {ethers.utils.formatUnits(balance || 0, 18)}</p>
+    </div>
+  );
+}
+```
+
+### Return Value
+
+```typescript
+{
+  balance: BigNumber | null;
+  loading: boolean;
+  error: Error | null;
+  refetch: () => Promise<BigNumber | null>;
+}
+```
+
+## useIsBorrowCollateralized
+
+The `useIsBorrowCollateralized` hook checks if an account has enough collateral for borrowing.
+
+### Usage
+
+```jsx
+import { useIsBorrowCollateralized } from 'compound-react';
+
+function CollateralizationStatus({ accountAddress }) {
+  const { 
+    isCollateralized, 
+    loading, 
+    error 
+  } = useIsBorrowCollateralized(null, accountAddress);
+  
+  if (loading) return <div>Loading...</div>;
+  if (error) return <div>Error: {error.message}</div>;
+  
+  return (
+    <div>
+      <h2>Collateralization Status</h2>
+      <p>
+        {isCollateralized 
+          ? 'Account has sufficient collateral for borrowing' 
+          : 'Account does not have sufficient collateral for borrowing'}
+      </p>
+    </div>
+  );
+}
+```
+
+### Return Value
+
+```typescript
+{
+  isCollateralized: boolean | null;
+  loading: boolean;
+  error: Error | null;
+  refetch: () => Promise<boolean | null>;
+}
+```
+
+## useBaseBorrowMin
+
+The `useBaseBorrowMin` hook retrieves the minimum borrow amount for the base asset.
+
+### Usage
+
+```jsx
+import { useBaseBorrowMin } from 'compound-react';
+
+function MinBorrowDisplay() {
+  const { 
+    minBorrow, 
+    loading, 
+    error 
+  } = useBaseBorrowMin();
+  
+  if (loading) return <div>Loading...</div>;
+  if (error) return <div>Error: {error.message}</div>;
+  
+  return (
+    <div>
+      <h2>Minimum Borrow Amount</h2>
+      <p>Min Borrow: {ethers.utils.formatUnits(minBorrow || 0, 6)} USDC</p>
+    </div>
+  );
+}
+```
+
+### Return Value
+
+```typescript
+{
+  minBorrow: BigNumber | null;
+  loading: boolean;
+  error: Error | null;
+  refetch: () => Promise<BigNumber | null>;
+}
+``` 

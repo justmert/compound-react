@@ -1,0 +1,330 @@
+---
+title: 'Liquidation'
+description: 'Hooks for working with liquidations on Compound III'
+---
+
+This section contains hooks for monitoring liquidation risk and performing liquidations on Compound III.
+
+## Summary of Liquidation Hooks
+
+- [useIsLiquidatable](#useisliquidatable): Checks if an account can be liquidated
+- [useAbsorb](#useabsorb): Allows liquidators to absorb (liquidate) an underwater account
+- [useBuyCollateral](#usebuycollateral): Allows users to buy collateral from the protocol during liquidation
+- [useGetAskPrice](#usegetaskprice): Retrieves the ask price for collateral during liquidation
+- [useGetLiquidatorPoints](#usegetliquidatorpoints): Retrieves the liquidator points for an account
+- [useGetReserves](#usegetreserves): Retrieves the reserves of the protocol
+- [useGetTargetReserves](#usegettargetreserves): Retrieves the target reserves of the protocol
+- [useGetCollateralReserves](#usegetcollateralreserves): Retrieves the collateral reserves of the protocol
+
+## useIsLiquidatable
+
+The `useIsLiquidatable` hook checks if an account can be liquidated.
+
+### Usage
+
+```jsx
+import { useIsLiquidatable } from 'compound-react';
+
+function LiquidationStatus({ accountAddress }) {
+  const { isLiquidatable, loading, error } = useIsLiquidatable(null, accountAddress);
+  
+  if (loading) return <div>Loading...</div>;
+  if (error) return <div>Error: {error.message}</div>;
+  
+  return (
+    <div>
+      <h2>Liquidation Status</h2>
+      <p>
+        {isLiquidatable 
+          ? 'Account is at risk of liquidation!' 
+          : 'Account is in good standing.'}
+      </p>
+    </div>
+  );
+}
+```
+
+### Return Value
+
+```typescript
+{
+  isLiquidatable: boolean | null;
+  loading: boolean;
+  error: Error | null;
+  refetch: () => Promise<boolean | null>;
+}
+```
+
+## useAbsorb
+
+The `useAbsorb` hook allows liquidators to absorb (liquidate) an underwater account.
+
+### Usage
+
+```jsx
+import { useAbsorb } from 'compound-react';
+
+function AbsorbComponent() {
+  const { absorb, loading, error, txHash } = useAbsorb();
+  
+  const handleAbsorb = async () => {
+    // Absorb an underwater account
+    const accountToAbsorb = '0x1234...';
+    const tx = await absorb(accountToAbsorb);
+    console.log('Absorb transaction:', tx);
+  };
+  
+  return (
+    <div>
+      <button onClick={handleAbsorb} disabled={loading}>
+        {loading ? 'Absorbing...' : 'Liquidate Account'}
+      </button>
+      {error && <p>Error: {error.message}</p>}
+      {txHash && <p>Transaction: {txHash}</p>}
+    </div>
+  );
+}
+```
+
+### Return Value
+
+```typescript
+{
+  absorb: (accountAddress: string) => Promise<string | null>; // Returns transaction hash
+  loading: boolean;
+  error: Error | null;
+  txHash: string | null;
+}
+```
+
+## useBuyCollateral
+
+The `useBuyCollateral` hook allows users to buy collateral from the protocol during liquidation.
+
+### Usage
+
+```jsx
+import { useBuyCollateral } from 'compound-react';
+
+function BuyCollateralComponent() {
+  const { buyCollateral, loading, error, txHash } = useBuyCollateral();
+  
+  const handleBuyCollateral = async () => {
+    // Buy WETH collateral with 1000 USDC
+    const collateralAsset = '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2'; // WETH
+    const minAmount = ethers.utils.parseUnits('0.5', 18); // Minimum 0.5 WETH to receive
+    const baseAmount = ethers.utils.parseUnits('1000', 6); // 1000 USDC to spend
+    const recipient = '0xYourAddress...'; // Address to receive the collateral
+    
+    const tx = await buyCollateral(collateralAsset, minAmount, baseAmount, recipient);
+    console.log('Buy collateral transaction:', tx);
+  };
+  
+  return (
+    <div>
+      <button onClick={handleBuyCollateral} disabled={loading}>
+        {loading ? 'Buying...' : 'Buy WETH Collateral'}
+      </button>
+      {error && <p>Error: {error.message}</p>}
+      {txHash && <p>Transaction: {txHash}</p>}
+    </div>
+  );
+}
+```
+
+### Return Value
+
+```typescript
+{
+  buyCollateral: (
+    asset: string,
+    minAmount: BigNumber,
+    baseAmount: BigNumber,
+    recipient: string
+  ) => Promise<string | null>; // Returns transaction hash
+  loading: boolean;
+  error: Error | null;
+  txHash: string | null;
+}
+```
+
+## useGetAskPrice
+
+The `useGetAskPrice` hook retrieves the ask price for collateral during liquidation.
+
+### Usage
+
+```jsx
+import { useGetAskPrice } from 'compound-react';
+
+function AskPriceDisplay({ assetAddress }) {
+  const { askPrice, loading, error } = useGetAskPrice(null, assetAddress);
+  
+  if (loading) return <div>Loading...</div>;
+  if (error) return <div>Error: {error.message}</div>;
+  
+  return (
+    <div>
+      <h2>Ask Price</h2>
+      <p>Price: {ethers.utils.formatUnits(askPrice || 0, 6)} USDC</p>
+    </div>
+  );
+}
+```
+
+### Return Value
+
+```typescript
+{
+  askPrice: BigNumber | null;
+  loading: boolean;
+  error: Error | null;
+  refetch: () => Promise<BigNumber | null>;
+}
+```
+
+## useGetLiquidatorPoints
+
+The `useGetLiquidatorPoints` hook retrieves the liquidator points for an account.
+
+### Usage
+
+```jsx
+import { useGetLiquidatorPoints } from 'compound-react';
+
+function LiquidatorPointsDisplay({ accountAddress }) {
+  const { points, loading, error } = useGetLiquidatorPoints(null, accountAddress);
+  
+  if (loading) return <div>Loading...</div>;
+  if (error) return <div>Error: {error.message}</div>;
+  
+  return (
+    <div>
+      <h2>Liquidator Points</h2>
+      <p>Points: {points?.toString()}</p>
+    </div>
+  );
+}
+```
+
+### Return Value
+
+```typescript
+{
+  points: BigNumber | null;
+  loading: boolean;
+  error: Error | null;
+  refetch: () => Promise<BigNumber | null>;
+}
+```
+
+## useGetReserves
+
+The `useGetReserves` hook retrieves the reserves of the protocol.
+
+### Usage
+
+```jsx
+import { useGetReserves } from 'compound-react';
+
+function ReservesDisplay() {
+  const { reserves, reservesUSD, loading, error } = useGetReserves();
+  
+  if (loading) return <div>Loading...</div>;
+  if (error) return <div>Error: {error.message}</div>;
+  
+  return (
+    <div>
+      <h2>Protocol Reserves</h2>
+      <p>Reserves: {ethers.utils.formatUnits(reserves || 0, 6)} USDC</p>
+      <p>Reserves in USD: ${reservesUSD?.toFixed(2)}</p>
+    </div>
+  );
+}
+```
+
+### Return Value
+
+```typescript
+{
+  reserves: BigNumber | null;
+  reservesUSD: number | null;
+  loading: boolean;
+  error: Error | null;
+  refetch: () => Promise<void>;
+}
+```
+
+## useGetTargetReserves
+
+The `useGetTargetReserves` hook retrieves the target reserves of the protocol.
+
+### Usage
+
+```jsx
+import { useGetTargetReserves } from 'compound-react';
+
+function TargetReservesDisplay() {
+  const { targetReserves, targetReservesUSD, loading, error } = useGetTargetReserves();
+  
+  if (loading) return <div>Loading...</div>;
+  if (error) return <div>Error: {error.message}</div>;
+  
+  return (
+    <div>
+      <h2>Target Protocol Reserves</h2>
+      <p>Target Reserves: {ethers.utils.formatUnits(targetReserves || 0, 6)} USDC</p>
+      <p>Target Reserves in USD: ${targetReservesUSD?.toFixed(2)}</p>
+    </div>
+  );
+}
+```
+
+### Return Value
+
+```typescript
+{
+  targetReserves: BigNumber | null;
+  targetReservesUSD: number | null;
+  loading: boolean;
+  error: Error | null;
+  refetch: () => Promise<void>;
+}
+```
+
+## useGetCollateralReserves
+
+The `useGetCollateralReserves` hook retrieves the collateral reserves of the protocol.
+
+### Usage
+
+```jsx
+import { useGetCollateralReserves } from 'compound-react';
+
+function CollateralReservesDisplay() {
+  const { collateralReserves, collateralReservesUSD, loading, error } = useGetCollateralReserves();
+  
+  if (loading) return <div>Loading...</div>;
+  if (error) return <div>Error: {error.message}</div>;
+  
+  return (
+    <div>
+      <h2>Collateral Reserves</h2>
+      <p>Collateral Reserves: {ethers.utils.formatUnits(collateralReserves || 0, 18)} WETH</p>
+      <p>Collateral Reserves in USD: ${collateralReservesUSD?.toFixed(2)}</p>
+    </div>
+  );
+}
+```
+
+### Return Value
+
+```typescript
+{
+  collateralReserves: BigNumber | null;
+  collateralReservesUSD: number | null;
+  loading: boolean;
+  error: Error | null;
+  refetch: () => Promise<void>;
+}
+``` 

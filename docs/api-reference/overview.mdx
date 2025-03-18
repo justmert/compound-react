@@ -1,0 +1,138 @@
+---
+title: 'API Reference'
+description: 'Detailed API reference for Compound React'
+---
+
+# API Reference
+
+This section provides a detailed API reference for the Compound React library. It covers all the hooks, components, and utilities provided by the library.
+
+## CompoundProvider
+
+The `CompoundProvider` component is the main entry point for using Compound React. It provides the context for all the hooks to access the Compound III protocol.
+
+### Props
+
+| Prop | Type | Description | Required |
+|------|------|-------------|----------|
+| `provider` | `Provider` | An ethers.js provider | Yes |
+| `network` | `string` | The network to connect to (defaults to the provider's network) | No |
+| `market` | `string` | The Compound III market to use (defaults to the main market for the network) | No |
+| `children` | `ReactNode` | The children components | Yes |
+
+### Example
+
+```jsx
+import { CompoundProvider } from 'compound-react';
+import { providers } from 'ethers';
+
+function App() {
+  const provider = new providers.Web3Provider(window.ethereum);
+  
+  return (
+    <CompoundProvider 
+      provider={provider}
+      network="base"
+      market="usdc"
+    >
+      <YourApp />
+    </CompoundProvider>
+  );
+}
+```
+
+## Hooks
+
+Compound React provides a comprehensive set of hooks for interacting with the Compound III protocol. These hooks are organized into categories based on their functionality.
+
+### Account Management Hooks
+
+- [`useGetAccountInfo`](/hooks/account/overview#usegetaccountinfo): Get information about a user's account
+- [`useGetAllowance`](/hooks/account/overview#usegetallowance): Get the allowance for a specific token
+- [`useApprove`](/hooks/account/overview#useapprove): Approve a token for use with Compound III
+- [`useGetPermissions`](/hooks/account/overview#usegetpermissions): Get the permissions for a specific account
+- [`useGivePermission`](/hooks/account/overview#usegivepermission): Give permission to another account
+- [`useRevokePermission`](/hooks/account/overview#userevokepermission): Revoke permission from another account
+
+### Collateral and Borrowing Hooks
+
+- [`useSupplyCollateral`](/hooks/collateral-borrowing/overview#usesupplycollateral): Supply an asset as collateral
+- [`useWithdrawCollateral`](/hooks/collateral-borrowing/overview#usewithdrawcollateral): Withdraw an asset from collateral
+- [`useBorrow`](/hooks/collateral-borrowing/overview#useborrow): Borrow the base asset
+- [`useRepay`](/hooks/collateral-borrowing/overview#userepay): Repay borrowed assets
+- [`useGetCollateralBalance`](/hooks/collateral-borrowing/overview#usegetcollateralbalance): Get the collateral balance for a specific asset
+- [`useGetBorrowBalance`](/hooks/collateral-borrowing/overview#usegetborrowbalance): Get the borrow balance
+
+### Helper Hooks
+
+- [`useGetAssetInfo`](/hooks/helpers/overview#usegetassetinfo): Get information about a specific asset
+- [`useGetAssetInfoByAddress`](/hooks/helpers/overview#usegetassetinfobyaddress): Get information about an asset by its address
+- [`useGetAllAssets`](/hooks/helpers/overview#usegetallassets): Get information about all assets
+- [`useGetBaseAsset`](/hooks/helpers/overview#usegetbaseasset): Get information about the base asset
+- [`useGetCollateralAssets`](/hooks/helpers/overview#usegetcollateralassets): Get information about all collateral assets
+- [`useNetworkInfo`](/hooks/helpers/overview#usenetworkinfo): Get information about the current network
+- [`useMarketInfo`](/hooks/helpers/overview#usemarketinfo): Get information about the current market
+
+### Interest Rate Hooks
+
+- [`useGetSupplyRate`](/hooks/interest-rates/overview#usegetsupplyrate): Get the supply rate for a specific asset
+- [`useGetBorrowRate`](/hooks/interest-rates/overview#usegetborrowrate): Get the borrow rate for the base asset
+- [`useGetUtilization`](/hooks/interest-rates/overview#usegetutilization): Get the utilization rate of the protocol
+- [`useGetInterestRateModel`](/hooks/interest-rates/overview#usegetinterestratemodel): Get the interest rate model parameters
+
+### Liquidation Hooks
+
+- [`useGetLiquidatableAccounts`](/hooks/liquidation/overview#usegetliquidatableaccounts): Get accounts that can be liquidated
+- [`useLiquidate`](/hooks/liquidation/overview#useliquidate): Liquidate an unhealthy position
+- [`useGetHealthFactor`](/hooks/liquidation/overview#usegethealthfactor): Get the health factor for a specific account
+- [`useGetLiquidationThreshold`](/hooks/liquidation/overview#usegetliquidationthreshold): Get the liquidation threshold for a specific asset
+
+### Protocol Rewards Hooks
+
+- [`useGetRewardsBalance`](/hooks/rewards/overview#usegetrewardsbalance): Get the rewards balance for a specific account
+- [`useClaimRewards`](/hooks/rewards/overview#useclaimrewards): Claim available rewards
+- [`useGetRewardsRate`](/hooks/rewards/overview#usegetrewardsrate): Get the rewards rate for a specific asset
+
+## Utilities
+
+Compound React also provides a set of utility functions for working with the Compound III protocol.
+
+### formatUnits
+
+Formats a BigNumber to a human-readable string with the appropriate number of decimals for the asset.
+
+```jsx
+import { formatUnits } from 'compound-react';
+
+const formattedAmount = formatUnits('1000000000', 'USDC'); // '1000.00'
+```
+
+### parseUnits
+
+Parses a human-readable string to a BigNumber with the appropriate number of decimals for the asset.
+
+```jsx
+import { parseUnits } from 'compound-react';
+
+const parsedAmount = parseUnits('1000', 'USDC'); // BigNumber { _hex: '0x3b9aca00', ... }
+```
+
+### getNetworkConfig
+
+Returns the configuration for a specific network.
+
+```jsx
+import { getNetworkConfig } from 'compound-react';
+
+const config = getNetworkConfig('base');
+```
+
+### getMarketConfig
+
+Returns the configuration for a specific market on a specific network.
+
+```jsx
+import { getMarketConfig } from 'compound-react';
+
+const config = getMarketConfig('base', 'usdc');
+``` 

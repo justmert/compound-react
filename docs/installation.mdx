@@ -1,0 +1,71 @@
+---
+title: 'Installation'
+description: 'How to install and set up Compound React in your project'
+---
+
+Getting started with Compound React is straightforward. This guide will walk you through the installation process and basic setup.
+
+## Prerequisites
+
+Before installing Compound React, make sure you have:
+
+- Node.js (v18 or later)
+- npm or yarn
+- A React project (v16.8.0 or later)
+
+## Installing the Package
+
+You can install Compound React using npm or yarn:
+
+```bash
+# Using npm
+npm install compound-react-kit
+
+# Using yarn
+yarn add compound-react-kit
+```
+
+## Peer Dependencies
+
+Compound React has the following peer dependencies:
+
+- `react` (>=16.8.0)
+- `react-dom` (>=16.8.0)
+
+Make sure these are installed in your project.
+
+## Setting Up the Provider
+
+To use the hooks provided by Compound React, you need to wrap your application with the `CompoundProvider` component:
+
+```jsx
+import { CompoundProvider } from 'compound-react';
+import { providers } from 'ethers';
+
+function App() {
+  // Create an Ethereum provider
+  const provider = new providers.Web3Provider(window.ethereum);
+  
+  return (
+    <CompoundProvider provider={provider}>
+      {/* Your application components */}
+    </CompoundProvider>
+  );
+}
+```
+
+The `CompoundProvider` accepts the following props:
+
+| Prop | Type | Description | Required |
+|------|------|-------------|----------|
+| `provider` | `Provider` | An ethers.js provider | Yes |
+| `network` | `string` | The network to connect to (defaults to the provider's network) | No |
+| `market` | `string` | The Compound III market to use (defaults to the main market for the network) | No |
+
+## TypeScript Support
+
+Compound React is built with TypeScript and provides type definitions out of the box. No additional setup is required to use it with TypeScript.
+
+## Next Steps
+
+Now that you have installed Compound React, check out the [Quickstart](/quickstart) guide to learn how to use the hooks in your application. 

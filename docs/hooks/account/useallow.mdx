@@ -1,0 +1,45 @@
+---
+title: 'useAllow'
+description: 'Allow or disallow another address to withdraw or transfer on behalf of the sender'
+---
+
+The `useAllow` hook allows or disallows another address to withdraw or transfer on behalf of the sender's address.
+
+## Usage
+
+```jsx
+import { useAllow } from 'compound-react';
+
+function AllowComponent() {
+  const { allow, loading, error, txHash } = useAllow();
+  
+  const handleAllow = async () => {
+    // Allow an address to act on behalf of the sender
+    const managerAddress = '0x1234...';
+    const isAllowed = true; // Set to false to disallow
+    const tx = await allow(managerAddress, isAllowed);
+    console.log('Allow transaction:', tx);
+  };
+  
+  return (
+    <div>
+      <button onClick={handleAllow} disabled={loading}>
+        {loading ? 'Processing...' : 'Allow Manager'}
+      </button>
+      {error && <p>Error: {error.message}</p>}
+      {txHash && <p>Transaction: {txHash}</p>}
+    </div>
+  );
+}
+```
+
+## Return Value
+
+```typescript
+{
+  allow: (manager: string, isAllowed: boolean) => Promise<string | null>; // Returns transaction hash
+  loading: boolean;
+  error: Error | null;
+  txHash: string | null;
+}
+``` 

@@ -1,0 +1,131 @@
+---
+title: 'Compound Dashboard'
+description: 'A comprehensive dashboard component for interacting with Compound III'
+---
+
+The `CompoundDashboard` component provides a complete user interface for interacting with the Compound III protocol. It combines multiple components into a tabbed interface, allowing users to view their position, supply and borrow assets, view market statistics, and see their transaction history.
+
+## Usage
+
+```jsx
+import { CompoundDashboard } from 'compound-react';
+import { providers } from 'ethers';
+
+function MyComponent() {
+  // Create an Ethereum provider
+  const provider = new providers.Web3Provider(window.ethereum);
+  
+  return (
+    <CompoundDashboard 
+      provider={provider}
+      chainId={1} // Ethereum Mainnet
+      userAddress="0x..." // Optional user address
+    />
+  );
+}
+```
+
+## Props
+
+| Prop | Type | Description |
+| ---- | ---- | ----------- |
+| `provider` | `Provider` | The Ethereum provider to use for transactions and data fetching |
+| `chainId` | `number` | The chain ID of the network to connect to |
+| `userAddress` | `string` | Optional user address to display data for (defaults to connected wallet) |
+| `baseAssetSymbol` | `string` | Optional symbol of the base asset (e.g., "USDC") |
+| `baseAssetDecimals` | `number` | Optional decimals of the base asset (e.g., 6 for USDC) |
+| `defaultTab` | `string` | Optional default tab to display (default: "overview") |
+| `showNetworkSelector` | `boolean` | Whether to show the network selector (default: true) |
+| `className` | `string` | Optional CSS class name to apply to the component |
+| `onTabChange` | `(tab: string) => void` | Optional callback function called when the active tab changes |
+
+## Example
+
+```jsx
+<CompoundDashboard 
+  provider={provider}
+  chainId={1}
+  userAddress="0x..."
+  baseAssetSymbol="USDC"
+  baseAssetDecimals={6}
+  defaultTab="supply-borrow"
+  showNetworkSelector={true}
+  className="max-w-6xl mx-auto"
+  onTabChange={(tab) => console.log(`Active tab: ${tab}`)}
+/>
+```
+
+## Dashboard Tabs
+
+The dashboard includes the following tabs:
+
+### Overview Tab
+
+The Overview tab displays a summary of the user's position and market statistics:
+
+- **User Position Summary**: Shows the user's supplied assets, borrowed amount, and health factor
+- **Interest Rate Display**: Shows current supply and borrow interest rates
+- **Market Stats**: Shows key market statistics like total supply, total borrow, and utilization rate
+
+### Supply & Borrow Tab
+
+The Supply & Borrow tab provides forms for supplying and borrowing assets:
+
+- **Supply Form**: Allows users to supply assets to the protocol
+- **Withdraw Form**: Allows users to withdraw supplied assets
+- **Borrow Form**: Allows users to borrow assets from the protocol
+- **Repay Form**: Allows users to repay borrowed assets
+
+### Assets Tab
+
+The Assets tab displays detailed information about all assets in the protocol:
+
+- **Asset List**: Shows all available assets with their prices, supply APY, and borrow APY
+- **Asset Details**: Shows detailed information about each asset, including collateral factors and supply caps
+
+### Transaction History Tab
+
+The Transaction History tab displays a chronological list of the user's transactions with the protocol:
+
+- **Transaction List**: Shows all transactions with their type, asset, amount, and date
+- **Filtering Options**: Allows filtering transactions by type and asset
+
+## Network Switching
+
+The dashboard includes a network selector that allows users to switch between different networks where Compound III is deployed:
+
+- **Network Selector**: Displays a dropdown of supported networks
+- **Automatic Switching**: Automatically switches the connected wallet to the selected network
+
+## Loading and Error States
+
+The component handles loading and error states automatically:
+
+- While data is being fetched, loading indicators are displayed
+- If errors occur during data fetching or transactions, error messages are displayed
+- If the user is not connected to a wallet, a connect wallet button is displayed
+
+## Customization
+
+You can customize the appearance of the dashboard using the `className` prop:
+
+```jsx
+<CompoundDashboard 
+  provider={provider}
+  chainId={1}
+  className="bg-gray-50 p-6 rounded-xl shadow-md dark:bg-gray-800"
+/>
+```
+
+## Related Components
+
+The CompoundDashboard combines the following components:
+
+- [UserPositionSummary](/components/user-position-summary)
+- [InterestRateDisplay](/components/interest-rate-display)
+- [MarketStats](/components/market-stats)
+- [SupplyForm](/components/supply-form)
+- [WithdrawForm](/components/withdraw-form)
+- [AssetInfoCard](/components/asset-info-card)
+- [TransactionHistory](/components/transaction-history)
+- [NetworkSelector](/components/network-selector)

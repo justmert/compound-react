@@ -1,0 +1,59 @@
+---
+title: 'UI Components Overview'
+description: 'Ready-to-use React components for Compound III'
+---
+
+The Compound React library includes a set of ready-to-use UI components built with [shadcn/ui](https://ui.shadcn.com/) that make it easy to create beautiful and functional interfaces for interacting with the Compound III protocol.
+
+These components are designed to work seamlessly with the hooks provided by the library, handling loading states, error handling, and data formatting for you.
+
+## Available Components
+
+The library includes the following UI components:
+
+- [Asset Info Card](/components/asset-info-card) - Displays detailed information about a collateral asset
+- [Interest Rate Display](/components/interest-rate-display) - Shows current supply and borrow interest rates
+- [Market Stats](/components/market-stats) - Displays market statistics like total supply, borrow, and utilization
+- [User Position Summary](/components/user-position-summary) - Shows a user's position including health factor
+- [Transaction History](/components/transaction-history) - Displays a history of user transactions
+- [Supply Form](/components/supply-form) - Form for supplying assets to the protocol
+- [Withdraw Form](/components/withdraw-form) - Form for withdrawing assets from the protocol
+- [Asset Selector](/components/asset-selector) - For selecting assets from the protocol
+- [Network Selector](/components/network-selector) - For selecting supported networks
+- [Compound Dashboard](/components/compound-dashboard) - A comprehensive dashboard combining multiple components
+
+## Getting Started
+
+To use these components in your application, simply import them from the library:
+
+```jsx
+import { 
+  CompoundProvider, 
+  AssetInfoCard, 
+  UserPositionSummary 
+} from 'compound-react';
+import { providers } from 'ethers';
+
+function App() {
+  // Create an Ethereum provider
+  const provider = new providers.Web3Provider(window.ethereum);
+  
+  return (
+    <CompoundProvider provider={provider} chainId={1}>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <UserPositionSummary 
+          userAddress="0x..." 
+          baseAssetSymbol="USDC" 
+        />
+        <AssetInfoCard assetIndex={0} />
+      </div>
+    </CompoundProvider>
+  );
+}
+```
+
+## Styling
+
+The components use [Tailwind CSS](https://tailwindcss.com/) for styling and are built with [shadcn/ui](https://ui.shadcn.com/), making them highly customizable. You can override the default styles by passing className props to the components.
+
+For more information on customizing the components, see the [Styling Guide](/components/styling). 

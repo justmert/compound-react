@@ -1,0 +1,340 @@
+---
+title: 'Networks and Markets'
+description: 'Supported networks and markets in Compound III'
+---
+
+Compound III is deployed across multiple networks and markets. This page provides an overview of the supported networks and markets, along with their specific configurations and contract addresses.
+
+## Supported Networks
+
+Compound III is deployed on the following networks:
+
+- **Ethereum Mainnet**
+- **Arbitrum**
+- **Base**
+- **Polygon**
+- **Optimism**
+- **Scroll**
+- **Mantle**
+- **Testnets**: Sepolia, Mumbai, Base Sepolia
+
+## Markets by Network
+
+Each network has one or more markets, each with a single borrowable asset and multiple collateral assets.
+
+### Ethereum Mainnet
+
+| Market | Borrowable Asset | Collateral Assets |
+|--------|------------------|-------------------|
+| USDC | USDC | WETH, wstETH, cbETH, rETH |
+| WETH | WETH | USDC, USDT, USDS |
+| USDT | USDT | WETH, wstETH, USDC |
+| USDS | USDS | WETH, wstETH, USDC |
+
+### Arbitrum
+
+| Market | Borrowable Asset | Collateral Assets |
+|--------|------------------|-------------------|
+| USDC.e | USDC.e | WETH, ARB |
+| USDC | USDC | WETH, ARB |
+| USDT | USDT | WETH, ARB |
+
+### Base
+
+| Market | Borrowable Asset | Collateral Assets |
+|--------|------------------|-------------------|
+| USDC | USDC | WETH, cbETH |
+| USDbC | USDbC | WETH, cbETH |
+| WETH | WETH | USDC, USDbC |
+| AERO | AERO | WETH, USDC |
+
+### Polygon
+
+| Market | Borrowable Asset | Collateral Assets |
+|--------|------------------|-------------------|
+| USDC | USDC | WETH, WMATIC |
+| USDT | USDT | WETH, WMATIC |
+
+### Optimism
+
+| Market | Borrowable Asset | Collateral Assets |
+|--------|------------------|-------------------|
+| USDC | USDC | WETH, OP |
+| USDT | USDT | WETH, OP |
+| WETH | WETH | USDC, USDT |
+
+### Scroll
+
+| Market | Borrowable Asset | Collateral Assets |
+|--------|------------------|-------------------|
+| USDC | USDC | WETH |
+
+### Mantle
+
+| Market | Borrowable Asset | Collateral Assets |
+|--------|------------------|-------------------|
+| USDe | USDe | WETH, MNT |
+
+## Using Networks and Markets in Compound React
+
+When using Compound React, you can specify which network and market to connect to by passing the appropriate props to the `CompoundProvider`:
+
+```jsx
+import { CompoundProvider } from 'compound-react';
+import { providers } from 'ethers';
+
+function App() {
+  const provider = new providers.Web3Provider(window.ethereum);
+  
+  return (
+    <CompoundProvider 
+      provider={provider}
+      network="base"  // Connect to Base network
+      market="usdc"   // Connect to the USDC market
+    >
+      <YourApp />
+    </CompoundProvider>
+  );
+}
+```
+
+### Getting Network and Market Information
+
+You can use the `useNetworkInfo` and `useMarketInfo` hooks to get information about the current network and market:
+
+```jsx
+import { useNetworkInfo, useMarketInfo } from 'compound-react';
+
+function NetworkAndMarketInfo() {
+  const { data: networkInfo } = useNetworkInfo();
+  const { data: marketInfo } = useMarketInfo();
+  
+  return (
+    <div>
+      <h2>Network Information</h2>
+      <p>Network: {networkInfo.name}</p>
+      <p>Chain ID: {networkInfo.chainId}</p>
+      
+      <h2>Market Information</h2>
+      <p>Market: {marketInfo.name}</p>
+      <p>Base Asset: {marketInfo.baseAsset}</p>
+      <p>Collateral Assets: {marketInfo.collateralAssets.join(', ')}</p>
+    </div>
+  );
+}
+```
+
+### Switching Networks and Markets
+
+You can switch networks and markets by updating the props passed to the `CompoundProvider`:
+
+```jsx
+import { useState } from 'react';
+import { CompoundProvider } from 'compound-react';
+import { providers } from 'ethers';
+
+function App() {
+  const [network, setNetwork] = useState('ethereum');
+  const [market, setMarket] = useState('usdc');
+  const provider = new providers.Web3Provider(window.ethereum);
+  
+  return (
+    <div>
+      <div>
+        <label>
+          Network:
+          <select value={network} onChange={(e) => setNetwork(e.target.value)}>
+            <option value="ethereum">Ethereum</option>
+            <option value="arbitrum">Arbitrum</option>
+            <option value="base">Base</option>
+            <option value="polygon">Polygon</option>
+            <option value="optimism">Optimism</option>
+            <option value="scroll">Scroll</option>
+            <option value="mantle">Mantle</option>
+          </select>
+        </label>
+        
+        <label>
+          Market:
+          <select value={market} onChange={(e) => setMarket(e.target.value)}>
+            <option value="usdc">USDC</option>
+            <option value="usdt">USDT</option>
+            <option value="weth">WETH</option>
+            {/* Add more options based on the selected network */}
+          </select>
+        </label>
+      </div>
+      
+      <CompoundProvider 
+        provider={provider}
+        network={network}
+        market={market}
+      >
+        <YourApp />
+      </CompoundProvider>
+    </div>
+  );
+}
+```
+
+## Contract Addresses
+
+The following tables provide the contract addresses for each market on each network. The Comet proxy address is the main contract address you'll use to interact with a Compound III market.
+
+> **Important**: The Comet proxy addresses (e.g., cUSDCv3, cWETHv3) are fixed and will not change, even if the implementation contracts are upgraded in the future. Always use the proxy address when interacting with Compound III markets.
+
+### Contract Types
+
+- **Comet Proxy**: The main entry point for interacting with a Compound III market. This address is fixed and won't change even if the implementation is upgraded.
+- **Comet Implementation**: The actual implementation of the market logic. Don't interact with this directly; use the Comet Proxy instead.
+- **Comet Ext**: An extension contract that provides additional functionality for the market.
+- **Configurator**: Used to set and update parameters of the Comet proxy contract.
+- **Rewards**: Holds reward tokens (e.g., COMP) and allows users to claim rewards.
+- **Bulker**: Allows users to batch multiple operations into a single transaction (e.g., supply multiple assets, borrow, etc.).
+
+### Ethereum Mainnet
+
+#### USDC Market
+
+| Contract | Address |
+|----------|---------|
+| Comet Proxy (cUSDCv3) | 0xc3d688B66703497DAA19211EEdff47f25384cdc3 |
+| Comet Implementation | 0x528c57A87706C31765001779168b42f24c694E1b |
+| Comet Ext | 0x285617313887d43256F852cAE0Ee4de4b68D45B0 |
+| Configurator | 0x316f9708bB98af7dA9c68C1C3b5e79039cD336E3 |
+| Rewards | 0x1B0e765F6224C21223AeA2af16c1C46E38885a40 |
+| Bulker | 0x74a81F84268744a40FEBc48f8b812a1f188D80C3 |
+| USDC | 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48 |
+| WETH | 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2 |
+| wstETH | 0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0 |
+
+#### WETH Market
+
+| Contract | Address |
+|----------|---------|
+| Comet Proxy (cWETHv3) | 0xA17581A9E3356d9A858b789D68B4d866e593aE94 |
+| Comet Implementation | 0x1a7E64b593a9B8796e88a7489a2CEb6d079C850d |
+| Comet Ext | 0xe2C1F54aFF6b38fD9DF7a69F22cB5fd3ba09F030 |
+| Configurator | 0x316f9708bB98af7dA9c68C1C3b5e79039cD336E3 |
+| Rewards | 0x1B0e765F6224C21223AeA2af16c1C46E38885a40 |
+| Bulker | 0xa397a8C2086C554B531c02E29f3291c9704B00c7 |
+| WETH | 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2 |
+| wstETH | 0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0 |
+
+#### USDT Market
+
+| Contract | Address |
+|----------|---------|
+| Comet Proxy (cUSDTv3) | 0x3Afdc9BCA9213A35503b077a6072F3D0d5AB0840 |
+| Comet Implementation | 0x0b4a278345DEAA4c7c61FdD2eB4AEC97e412a0d4 |
+| Comet Ext | 0x5C58d4479A1E9b2d19EE052143FA73F0ee79A36e |
+| Configurator | 0x316f9708bB98af7dA9c68C1C3b5e79039cD336E3 |
+| Rewards | 0x1B0e765F6224C21223AeA2af16c1C46E38885a40 |
+| Bulker | 0xa397a8C2086C554B531c02E29f3291c9704B00c7 |
+| USDT | 0xdAC17F958D2ee523a2206206994597C13D831ec7 |
+| WETH | 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2 |
+
+#### USDS Market
+
+| Contract | Address |
+|----------|---------|
+| Comet Proxy (cUSDSv3) | 0x5D409e56D886231aDAf00c8775665AD0f9897b56 |
+| Comet Implementation | 0xBC910e3659BDB03c133961760693DB9118C05B04 |
+| Comet Ext | 0x95DeDD64b551F05E9f59a101a519B024b6b116E7 |
+| Configurator | 0x316f9708bB98af7dA9c68C1C3b5e79039cD336E3 |
+| Rewards | 0x1B0e765F6224C21223AeA2af16c1C46E38885a40 |
+| Bulker | 0xa397a8C2086C554B531c02E29f3291c9704B00c7 |
+| USDS | 0xdC035D45d973E3EC169d2276DDab16f1e407384F |
+| WETH | 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2 |
+
+### Arbitrum
+
+#### USDC.e Market
+
+| Contract | Address |
+|----------|---------|
+| Comet Proxy (cUSDCv3) | 0xA5EDBDD9646f8dFF606d7448e414884C7d905dCA |
+| Comet Implementation | 0x9aB958D306Beb81711e5f5CA0731C1E4772dF9cb |
+| Comet Ext | 0x1B2E88cC7365d90e7E81392432482925BD8437E9 |
+| Configurator | 0xb21b06D71c75973babdE35b49fFDAc3F82Ad3775 |
+| Rewards | 0x88730d254A2f7e6AC8388c3198aFd694bA9f7fae |
+| Bulker | 0xbdE8F31D2DdDA895264e27DD990faB3DC87b372d |
+| USDC.e | 0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8 |
+| WETH | 0x82af49447d8a07e3bd95bd0d56f35241523fbab1 |
+| ARB | 0x912ce59144191c1204e64559fe8253a0e49e6548 |
+
+#### USDC Market
+
+| Contract | Address |
+|----------|---------|
+| Comet Proxy (cUSDCv3) | 0x9c4ec768c28520B50860ea7a15bd7213a9fF58bf |
+| Comet Implementation | 0xF25212E676D1F7F89Cd72fFEe66158f541246445 |
+| Comet Ext | 0x1B2E88cC7365d90e7E81392432482925BD8437E9 |
+| Configurator | 0xb21b06D71c75973babdE35b49fFDAc3F82Ad3775 |
+| Rewards | 0x88730d254A2f7e6AC8388c3198aFd694bA9f7fae |
+| Bulker | 0xbdE8F31D2DdDA895264e27DD990faB3DC87b372d |
+| USDC | 0xaf88d065e77c8cC2239327C5EDb3A432268e5831 |
+| WETH | 0x82af49447d8a07e3bd95bd0d56f35241523fbab1 |
+| ARB | 0x912ce59144191c1204e64559fe8253a0e49e6548 |
+
+#### WETH Market
+
+| Contract | Address |
+|----------|---------|
+| Comet Proxy (cWETHv3) | 0x6f7D514bbD4aFf3BcD1140B7344b32f063dEe486 |
+| Comet Implementation | 0x8df378453ff9deffa513367cdf9b3b53726303e9 |
+| Comet Ext | 0x5404872d8f2e24b230EC9B9eC64E3855F637FB93 |
+| Configurator | 0xb21b06D71c75973babdE35b49fFDAc3F82Ad3775 |
+| Rewards | 0x88730d254A2f7e6AC8388c3198aFd694bA9f7fae |
+| Bulker | 0xbdE8F31D2DdDA895264e27DD990faB3DC87b372d |
+| WETH | 0x82aF49447D8a07e3bd95BD0d56f35241523fBab1 |
+| USDC | 0xaf88d065e77c8cC2239327C5EDb3A432268e5831 |
+| USDT | 0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9 |
+
+### Base
+
+#### USDC Market
+
+| Contract | Address |
+|----------|---------|
+| Comet Proxy (cUSDCv3) | 0xb125E6687d4313864e53df431d5425969c15Eb2F |
+| Comet Implementation | 0x23684254bc5077c79F166E77D22F516f86d8023a |
+| Comet Ext | 0x3bac64185786922292266AA92a58cf870D694E2a |
+| Configurator | 0x45939657d1CA34A8FA39A924B71D28Fe8431e581 |
+| Rewards | 0x123964802e6ABabBE1Bc9547D72Ef1B69B00A6b1 |
+| Bulker | 0x78D0677032A35c63D142a48A2037048871212a8C |
+| USDC | 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913 |
+| WETH | 0x4200000000000000000000000000000000000006 |
+| cbETH | 0x2Ae3F1Ec7F1F5012CFEab0185bfc7aa3cf0DEc22 |
+
+#### USDbC Market
+
+| Contract | Address |
+|----------|---------|
+| Comet Proxy (cUSDbCv3) | 0x9c4ec768c28520B50860ea7a15bd7213a9fF58bf |
+| Comet Implementation | 0x3Ab91391221204372DC9FE5E3D4516d03988E8B8 |
+| Comet Ext | 0x2F9E3953b2Ef89fA265f2a32ed9F80D00229125B |
+| Configurator | 0x45939657d1CA34A8FA39A924B71D28Fe8431e581 |
+| Rewards | 0x123964802e6ABabBE1Bc9547D72Ef1B69B00A6b1 |
+| Bulker | 0x78D0677032A35c63D142a48A2037048871212a8C |
+| USDbC | 0xd9aAEc86B65D86f6A7B5B1b0c42FFA531710b6CA |
+| WETH | 0x4200000000000000000000000000000000000006 |
+| cbETH | 0x2Ae3F1Ec7F1F5012CFEab0185bfc7aa3cf0DEc22 |
+
+#### WETH Market
+
+| Contract | Address |
+|----------|---------|
+| Comet Proxy (cWETHv3) | 0x46e6b214b524310239732D51387075E0e70970bf |
+| Comet Implementation | 0x1f9d71Ef69f502188eC65ceBAc049fe646B74De4 |
+| Comet Ext | 0x88bB8C109640778D3fB1074bB10a66e31F2c9c17 |
+| Configurator | 0x45939657d1CA34A8FA39A924B71D28Fe8431e581 |
+| Rewards | 0x123964802e6ABabBE1Bc9547D72Ef1B69B00A6b1 |
+| Bulker | 0x78D0677032A35c63D142a48A2037048871212a8C |
+| WETH | 0x4200000000000000000000000000000000000006 |
+| USDC | 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913 |
+| USDbC | 0xd9aAEc86B65D86f6A7B5B1b0c42FFA531710b6CA |
+
+## Next Steps
+
+Now that you understand the networks and markets supported by Compound III, you can explore the [Hooks](/hooks/overview) section to learn how to interact with these markets using Compound React. 

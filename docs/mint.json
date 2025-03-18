@@ -1,0 +1,67 @@
+{
+  "name": "Compound React",
+  "favicon": "/favicon.svg",
+  "colors": {
+    "primary": "#00D395",
+    "light": "#81D9B3",
+    "dark": "#00A376",
+    "background": {
+      "dark": "#0F1117"
+    }
+  },
+  "topbarLinks": [
+    {
+      "name": "GitHub",
+      "url": "https://github.com/justmert/compound-react"
+    }
+  ],
+  "topbarCtaButton": {
+    "name": "Get Started",
+    "url": "/introduction"
+  },
+  "anchors": [
+   
+  ],
+  "navigation": [
+    {
+      "group": "Getting Started",
+      "pages": ["introduction", "installation", "quickstart"]
+    },
+    {
+      "group": "Core Concepts",
+      "pages": ["concepts/compound-protocol", "concepts/networks-markets"]
+    },
+    {
+      "group": "Hooks",
+      "pages": [
+        "hooks/account/overview",
+        "hooks/collateral-borrowing/overview",
+        "hooks/helpers/overview",
+        "hooks/interest-rates/overview",
+        "hooks/liquidation/overview",
+        "hooks/rewards/overview"
+      ]
+    },
+    {
+      "group": "UI Components",
+      "pages": [
+        "components/styling",
+        "components/asset-info-card",
+        "components/interest-rate-display",
+        "components/market-stats",
+        "components/user-position-summary",
+        "components/transaction-history",
+        "components/supply-form",
+        "components/withdraw-form",
+        "components/asset-selector",
+        "components/network-selector",
+        "components/compound-dashboard"
+      ]
+    }
+  ],
+  "footerSocials": {
+    "twitter": "https://twitter.com/compoundfinance",
+    "github": "https://github.com/compound-finance",
+    "discord": "https://discord.com/invite/compound"
+  }
+} 

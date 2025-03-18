@@ -1,0 +1,115 @@
+---
+title: 'TransactionHistory'
+description: 'Component for displaying transaction history for a user in Compound III'
+---
+
+The `TransactionHistory` component displays a chronological list of a user's transactions with the Compound III protocol, including supplies, withdrawals, borrows, and repayments.
+
+## Usage
+
+```jsx
+import { TransactionHistory } from 'compound-react';
+import { providers } from 'ethers';
+
+function MyComponent() {
+  // Create an Ethereum provider
+  const provider = new providers.Web3Provider(window.ethereum);
+  
+  return (
+    <TransactionHistory 
+      provider={provider}
+      chainId={1} // Ethereum Mainnet
+      userAddress="0x..." // The address to display transactions for
+    />
+  );
+}
+```
+
+## Props
+
+| Prop | Type | Description |
+| ---- | ---- | ----------- |
+| `provider` | `Provider` | The Ethereum provider to use for fetching data |
+| `chainId` | `number` | The chain ID of the network to connect to |
+| `userAddress` | `string` | The address to display transactions for (defaults to connected wallet) |
+| `limit` | `number` | Optional maximum number of transactions to display (default: 10) |
+| `className` | `string` | Optional CSS class name to apply to the component |
+| `onRefresh` | `() => void` | Optional callback function to call when the refresh button is clicked |
+
+## Example
+
+```jsx
+<TransactionHistory 
+  provider={provider}
+  chainId={1}
+  userAddress="0x..."
+  limit={20}
+  className="max-w-2xl mx-auto"
+  onRefresh={() => console.log('Transaction history refreshed')}
+/>
+```
+
+## Displayed Information
+
+The component displays the following information for each transaction:
+
+- **Transaction Type**: Supply, Withdraw, Borrow, Repay, Liquidation, etc.
+- **Asset**: The asset involved in the transaction (e.g., USDC, ETH)
+- **Amount**: The amount of the asset involved
+- **Date**: The date and time when the transaction occurred
+- **Transaction Hash**: A link to view the transaction on a block explorer
+- **Status**: The status of the transaction (Confirmed, Pending, Failed)
+
+## Transaction Types
+
+The component supports displaying the following transaction types:
+
+- **Supply**: Adding collateral to the protocol
+- **Withdraw**: Removing collateral from the protocol
+- **Borrow**: Borrowing assets from the protocol
+- **Repay**: Repaying borrowed assets
+- **Liquidation**: When a position is liquidated
+- **Transfer**: Transferring collateral between accounts
+- **Claim Rewards**: Claiming COMP rewards
+
+## Filtering and Sorting
+
+The component includes features for filtering and sorting transactions:
+
+- **Filter by Type**: Filter transactions by type (e.g., only show supplies)
+- **Filter by Asset**: Filter transactions by asset (e.g., only show USDC transactions)
+- **Sort by Date**: Sort transactions by date (newest first or oldest first)
+
+## Loading and Error States
+
+The component handles loading and error states automatically:
+
+- While data is being fetched, a loading indicator is displayed
+- If an error occurs during data fetching, an error message is displayed
+- If the user has no transactions, an appropriate message is shown
+
+## Pagination
+
+For users with many transactions, the component supports pagination:
+
+- **Load More**: Button to load more transactions
+- **Page Navigation**: Navigate between pages of transactions
+
+## Customization
+
+You can customize the appearance of the component using the `className` prop:
+
+```jsx
+<TransactionHistory 
+  provider={provider}
+  chainId={1}
+  userAddress="0x..."
+  className="bg-gray-50 p-6 rounded-xl shadow-md dark:bg-gray-800"
+/>
+```
+
+## Related Components
+
+- [UserPositionSummary](/components/user-position-summary) - For displaying a user's position
+- [SupplyForm](/components/supply-form) - For supplying assets to the protocol
+- [WithdrawForm](/components/withdraw-form) - For withdrawing assets from the protocol

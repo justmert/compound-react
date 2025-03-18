@@ -1,0 +1,12 @@
+{
+  "name": "compound-react-docs",
+  "version": "1.0.0",
+  "description": "Documentation for Compound React",
+  "main": "index.js",
+  "scripts": {
+    "start": "http-server -p 3000 -o"
+  },
+  "dependencies": {
+    "http-server": "^14.1.1"
+  }
+} 

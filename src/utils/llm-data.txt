@@ -1,0 +1,3461 @@
+# https://docs.compound.finance/liquidation/ llms-full.txt
+
+## Liquidation in Compound
+- [Compound III](https://docs.compound.finance/)
+- [Interest Rates](https://docs.compound.finance/interest-rates/)
+- [Collateral & Borrowing](https://docs.compound.finance/collateral-and-borrowing/)
+- [Liquidation](https://docs.compound.finance/liquidation/)
+- [Account Management](https://docs.compound.finance/account-management/)
+- [Protocol Rewards](https://docs.compound.finance/protocol-rewards/)
+- [Governance](https://docs.compound.finance/governance/)
+- [Helper Functions](https://docs.compound.finance/helper-functions/)
+
+# Liquidation
+
+Liquidation is determined by _[liquidation collateral factors](https://docs.compound.finance/helper-functions/#get-asset-info-by-address)_, which are separate and higher than borrow collateral factors (used to determine initial borrowing capacity), which protects borrowers & the protocol by ensuring a price buffer for all new positions. These also enable governance to reduce borrow collateral factors without triggering the liquidation of existing positions.
+
+When an account’s borrow balance exceeds the limits set by liquidation collateral factors, it is eligible for liquidation. A liquidator (a bot, contract, or user) can call the _[absorb](https://docs.compound.finance/liquidation/#absorb)_ function, which relinquishes ownership of the accounts collateral, and returns the value of the collateral, minus a penalty ( _[liquidationFactor](https://docs.compound.finance/helper-functions/#get-asset-info-by-address)_), to the user in the base asset. The liquidated user has no remaining debt, and typically, will have an excess (interest earning) balance of the base asset.
+
+Each absorption is paid for by the protocol’s reserves of the base asset. In return, the protocol receives the collateral assets. If the remaining reserves are less than a governance-set _[target](https://docs.compound.finance/liquidation/#target-reserves)_, liquidators are able to _[buy](https://docs.compound.finance/liquidation/#buy-collateral)_ the collateral at a _[discount](https://docs.compound.finance/liquidation/#ask-price)_ using the base asset, which increases the protocol’s base asset reserves.
+
+### Liquidatable Accounts
+
+This function returns true if the account passed to it has negative liquidity based on the liquidation collateral factor. A return value of true indicates that the account is presently liquidatable.
+
+#### Comet
+
+```solidity hljs
+function isLiquidatable(address account) public view returns (bool)
+
+```
+
+- `account`: The account to examine liquidatability.
+- `RETURNS`: Returns true if the account is presently able to be liquidated.
+
+#### Solidity
+
+```solidity hljs
+Comet comet = Comet(0xCometAddress);
+bool isLiquidatable = comet.isLiquidatable(0xAccount);
+
+```
+
+#### Ethers.js v5.x
+
+```js hljs language-javascript
+const comet = new ethers.Contract(contractAddress, abiJson, provider);
+const isLiquidatable = await comet.callStatic.isLiquidatable('0xAccount');
+
+```
+
+### Absorb
+
+This function can be called by any address to liquidate an underwater account. It transfers the account’s debt to the protocol account, decreases cash reserves to repay the account’s borrows, and adds the collateral to the protocol’s own balance. The caller has the amount of gas spent noted. In the future, they could be compensated via governance.
+
+#### Comet
+
+```solidity hljs
+function absorb(address absorber, address[] calldata accounts)
+
+```
+
+- `absorber`: The account that is issued liquidator points during successful execution.
+- `accounts`: An array of underwater accounts that are to be liquidated.
+- `RETURN`: No return, reverts on error.
+
+#### Solidity
+
+```solidity hljs
+Comet comet = Comet(0xCometAddress);
+comet.absorb(0xMyAddress, [ 0xUnderwaterAddress ]);
+
+```
+
+#### Ethers.js v5.x
+
+```js hljs language-javascript
+const comet = new ethers.Contract(contractAddress, abiJson, provider);
+await comet.absorb('0xMyAddress', [ '0xUnderwaterAddress' ]);
+
+```
+
+### Buy Collateral
+
+This function allows any account to buy collateral from the protocol, at a discount from the Price Feed’s price, using base tokens. A minimum collateral amount should be specified to indicate the maximum slippage acceptable for the buyer.
+
+This function can be used after an account has been liquidated and there is collateral available to be purchased. Doing so increases protocol reserves. The amount of collateral available can be found by calling the _[Collateral Balance](https://docs.compound.finance/collateral-and-borrowing/#collateral-balance)_ function. The price of the collateral can be determined by using the _[quoteCollateral](https://docs.compound.finance/liquidation/#ask-price)_ function.
+
+#### Comet
+
+```solidity hljs
+function buyCollateral(address asset, uint minAmount, uint baseAmount, address recipient) external
+
+```
+
+- `asset`: The address of the collateral asset.
+- `minAmount`: The minimum amount of collateral tokens that are to be received by the buyer, scaled up by 10 to the “decimals” integer in the collateral asset’s contract.
+- `baseAmount`: The amount of base tokens used to buy collateral scaled up by 10 to the “decimals” integer in the base asset’s contract.
+- `recipient`: The address that receives the purchased collateral.
+- `RETURN`: No return, reverts on error.
+
+#### Solidity
+
+```solidity hljs
+Comet comet = Comet(0xCometAddress);
+comet.buyCollateral(0xAssetAddress, 5e18, 5e18, 0xRecipient);
+
+```
+
+#### Ethers.js v5.x
+
+```js hljs language-javascript
+const comet = new ethers.Contract(contractAddress, abiJson, provider);
+await comet.buyCollateral('0xAssetAddress', 5e18, 5e18, '0xRecipient');
+
+```
+
+### Ask Price
+
+In order to repay the borrows of absorbed accounts, the protocol needs to sell the seized collateral. The _Ask Price_ is the price of the asset to be sold at a discount (configured by governance). This function uses the price returned by the protocol’s price feed. The discount of the asset is derived from the `StoreFrontPriceFactor` and the asset’s `LiquidationFactor` using the following formula.
+
+```hljs solidity
+DiscountFactor = StoreFrontPriceFactor * (1e18 - Asset.LiquidationFactor)
+
+```
+
+#### Comet
+
+```solidity hljs
+function quoteCollateral(address asset, uint baseAmount) public view returns (uint)
+
+```
+
+- `address`: The address of the asset which is being quoted.
+- `amount`: The amount of the base asset used to purchase discounted collateral, as an integer, scaled up by 10 to the “decimals” integer in the base asset’s contract.
+- `RETURN`: The amount of collateral asset that can be purchased using the base asset, as an integer, scaled up by 10 to the “decimals” integer in the collateral asset’s contract.
+
+#### Solidity
+
+```solidity hljs
+Comet comet = Comet(0xCometAddress);
+uint askPrice = comet.quoteCollateral(0xERC20Address, 10000000000);
+
+```
+
+#### Ethers.js v5.x
+
+```js hljs language-javascript
+const comet = new ethers.Contract(contractAddress, abiJson, provider);
+const askPrice = await comet.callStatic.quoteCollateral('0xERC20Address', 1000000);
+
+```
+
+### Liquidator Points
+
+The protocol keeps track of the successful executions of absorb by tallying liquidator “points” and gas the liquidator has spent.
+
+#### Comet
+
+```solidity hljs
+mapping(address => LiquidatorPoints) public liquidatorPoints;
+
+```
+
+- `address`: The address of the liquidator account.
+- `RETURN`: A struct containing the stored data pertaining to the liquidator account.
+- `numAbsorbs`: A Solidity `uint32` of the number of times absorb was successfully called.
+- `numAbsorbed`: A Solidity `uint64` of the number of accounts successfully absorbed by the protocol as a result of the liquidators call to the absorb function.
+- `approxSpend`: A Solidity `uint128` of the sum of all gas spent by the liquidator that has called the absorb function.
+
+#### Solidity
+
+```solidity hljs
+Comet comet = Comet(0xCometAddress);
+LiquidatorPoints pointsData = comet.liquidatorPoints(0xLiquidatorAddress);
+
+```
+
+#### Ethers.js v5.x
+
+```js hljs language-javascript
+const comet = new ethers.Contract(contractAddress, abiJson, provider);
+const [ numAbsorbs, numAbsorbed, approxSpend ] = await comet.callStatic.liquidatorPoints('0xLiquidatorAddress');
+
+```
+
+## Reserves
+
+Reserves are a balance of the base or collateral asset, stored internally in the protocol, which automatically protect users from bad debt. Reserves can also be withdrawn or used through the governance process.
+
+Reserves are generated in two ways: the difference in interest paid by borrowers, and earned by suppliers of the base asset, accrue as reserves into the protocol. Second, the [liquidation](https://docs.compound.finance/liquidation/#liquidation) process uses, and can add to, protocol reserves based on the [target reserve](https://docs.compound.finance/liquidation/#target-reserves) level set by governance.
+
+### Get Base Asset Reserves
+
+This function returns the amount of protocol reserves for the base asset as an integer.
+
+#### Comet
+
+```solidity hljs
+function getReserves() public view returns (int)
+
+```
+
+- `RETURNS`: The amount of base asset stored as reserves in the protocol as an unsigned integer scaled up by 10 to the “decimals” integer in the asset’s contract.
+
+#### Solidity
+
+```solidity hljs
+Comet comet = Comet(0xCometAddress);
+uint reserves = comet.getReserves();
+
+```
+
+#### Ethers.js v5.x
+
+```js hljs language-javascript
+const comet = new ethers.Contract(contractAddress, abiJson, provider);
+const reserves = await comet.callStatic.getReserves();
+
+```
+
+### Get Collateral Asset Reserves
+
+This function returns the amount of protocol reserves for the specified collateral asset as an integer.
+
+#### Comet
+
+```solidity hljs
+function getCollateralReserves(address asset) public view returns (uint)
+
+```
+
+- `RETURNS`: The amount of collateral asset stored as reserves in the protocol as an unsigned integer scaled up by 10 to the “decimals” integer in the collateral asset’s contract.
+
+#### Solidity
+
+```solidity hljs
+Comet comet = Comet(0xCometAddress);
+uint reserves = comet.getCollateralReserves(0xCollateralAsset);
+
+```
+
+#### Ethers.js v5.x
+
+```js hljs language-javascript
+const comet = new ethers.Contract(contractAddress, abiJson, provider);
+const reserves = await comet.callStatic.getCollateralReserves(collateralAssetAddress);
+
+```
+
+### Target Reserves
+
+This immutable value represents the target amount of reserves of the base token. If the protocol holds greater than or equal to this amount of reserves, the _[buyCollateral](https://docs.compound.finance/liquidation/#buy-collateral)_ function can no longer be successfully called.
+
+#### Comet
+
+```solidity hljs
+function targetReserves() public view returns (uint)
+
+```
+
+- `RETURN`: The target reserve value of the base asset as an integer, scaled up by 10 to the “decimals” integer in the base asset’s contract.
+
+#### Solidity
+
+```solidity hljs
+Comet comet = Comet(0xCometAddress);
+uint targetReserves = comet.targetReserves();
+
+```
+
+#### Ethers.js v5.x
+
+```js hljs language-javascript
+const comet = new ethers.Contract(contractAddress, abiJson, provider);
+const targetReserves = await comet.callStatic.targetReserves();
+
+```
+
+## Compound III Protocol
+- [Compound III](https://docs.compound.finance/)
+- [Interest Rates](https://docs.compound.finance/interest-rates/)
+- [Collateral & Borrowing](https://docs.compound.finance/collateral-and-borrowing/)
+- [Liquidation](https://docs.compound.finance/liquidation/)
+- [Account Management](https://docs.compound.finance/account-management/)
+- [Protocol Rewards](https://docs.compound.finance/protocol-rewards/)
+- [Governance](https://docs.compound.finance/governance/)
+- [Helper Functions](https://docs.compound.finance/helper-functions/)
+
+# Compound III
+
+## Introduction
+
+[Compound III](https://github.com/compound-finance/comet) is an EVM compatible protocol that enables supplying of crypto assets as collateral in order to borrow the _base asset_. Accounts can also earn interest by supplying the base asset to the protocol.
+
+The initial deployment of Compound III is on Ethereum and the base asset is USDC.
+
+Please join the **#development** room in the Compound community [Discord](https://compound.finance/discord) server as well as the forums at [comp.xyz](https://www.comp.xyz/); Compound Labs and members of the community look forward to helping you build an application on top of Compound III. Your questions help us improve, so please don’t hesitate to ask if you can’t find what you are looking for here.
+
+For documentation of the Compound v2 Protocol, see [docs.compound.finance/v2](https://docs.compound.finance/v2/).
+
+### Networks
+
+The network deployment artifacts with contract addresses are available in the [Comet](https://github.com/compound-finance/comet) repository `deployments/` folder.
+
+The v3 proxy is the only address to be used to interact with a Compound III instance. It is the first address listed in each of the tabs below. To generate the proper [Comet Interface ABI](https://docs.compound.finance/public/files/comet-interface-abi-98f438b.json) ( `CometInterface.sol`), compile the Comet project using `yarn compile`.
+
+Mainnet USDC
+
+Mainnet WETH
+
+Mainnet USDT
+
+Mainnet wstETH
+
+Mainnet USDS
+
+Polygon USDC
+
+Polygon USDT
+
+Arbitrum USDC.e
+
+Arbitrum USDC
+
+Arbitrum WETH
+
+Arbitrum USDT
+
+Base USDC
+
+Base USDbC
+
+Base WETH
+
+Base AERO
+
+Scroll USDC
+
+Optimism USDC
+
+Optimism USDT
+
+Optimism WETH
+
+Mantle USDe
+
+Sepolia USDC
+
+Sepolia WETH
+
+Mumbai USDC
+
+Base Sepolia USDC
+
+Base Sepolia WETH
+
+#### Ethereum Mainnet - USDC Base
+
+| Contract | Address |  |  |
+| --- | --- | --- | --- |
+| cUSDCv3 | 0xc3d688B66703497DAA19211EEdff47f25384cdc3 |  |  |
+| cUSDCv3 Implementation | 0x528c57A87706C31765001779168b42f24c694E1b |  |  |
+| cUSDCv3 Ext | 0x285617313887d43256F852cAE0Ee4de4b68D45B0 |  |  |
+| Configurator | 0x316f9708bB98af7dA9c68C1C3b5e79039cD336E3 |  |  |
+| Configurator Implementation | 0xcFC1fA6b7ca982176529899D99af6473aD80DF4F |  |  |
+| Proxy Admin | 0x1EC63B5883C3481134FD50D5DAebc83Ecd2E8779 |  |  |
+| Comet Factory | 0xa7F7De6cCad4D83d81676717053883337aC2c1b4 |  |  |
+| Rewards | 0x1B0e765F6224C21223AeA2af16c1C46E38885a40 |  |  |
+| Bulker | 0x74a81F84268744a40FEBc48f8b812a1f188D80C3 |  |  |
+| Governor | 0xc0Da02939E1441F497fd74F78cE7Decb17B66529 |  |  |
+| Timelock | 0x6d903f6003cca6255D85CcA4D3B5E5146dC33925 |  |  |
+| USDC | 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48 |  |  |
+| cbBTC | 0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf |  |  |
+| COMP | 0xc00e94Cb662C3520282E6f5717214004A7f26888 |  |  |
+| LINK | 0x514910771AF9Ca656af840dff83E8264EcF986CA |  |  |
+| tBTC | 0x18084fbA666a33d37592fA2633fD49a74DD93a88 |  |  |
+| UNI | 0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984 |  |  |
+| WBTC | 0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599 |  |  |
+| WETH | 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2 |  |  |
+| wstETH | 0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0 |  |  |
+
+#### Ethereum Mainnet - WETH Base
+
+| Contract | Address |  |  |
+| --- | --- | --- | --- |
+| cWETHv3 | 0xA17581A9E3356d9A858b789D68B4d866e593aE94 |  |  |
+| cWETHv3 Implementation | 0x1a7E64b593a9B8796e88a7489a2CEb6d079C850d |  |  |
+| cWETHv3 Ext | 0xe2C1F54aFF6b38fD9DF7a69F22cB5fd3ba09F030 |  |  |
+| Configurator | 0x316f9708bB98af7dA9c68C1C3b5e79039cD336E3 |  |  |
+| Configurator Implementation | 0xcFC1fA6b7ca982176529899D99af6473aD80DF4F |  |  |
+| Proxy Admin | 0x1EC63B5883C3481134FD50D5DAebc83Ecd2E8779 |  |  |
+| Comet Factory | 0xa7F7De6cCad4D83d81676717053883337aC2c1b4 |  |  |
+| Rewards | 0x1B0e765F6224C21223AeA2af16c1C46E38885a40 |  |  |
+| Bulker | 0xa397a8C2086C554B531c02E29f3291c9704B00c7 |  |  |
+| Governor | 0xc0Da02939E1441F497fd74F78cE7Decb17B66529 |  |  |
+| Timelock | 0x6d903f6003cca6255D85CcA4D3B5E5146dC33925 |  |  |
+| cbBTC | 0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf |  |  |
+| cbETH | 0xBe9895146f7AF43049ca1c1AE358B0541Ea49704 |  |  |
+| COMP | 0xc00e94Cb662C3520282E6f5717214004A7f26888 |  |  |
+| ezETH | 0xbf5495Efe5DB9ce00f80364C8B423567e58d2110 |  |  |
+| osETH | 0xf1C9acDc66974dFB6dEcB12aA385b9cD01190E38 |  |  |
+| rETH | 0xae78736Cd615f374D3085123A210448E74Fc6393 |  |  |
+| rsETH | 0xA1290d69c65A6Fe4DF752f95823fae25cB99e5A7 |  |  |
+| rswETH | 0xFAe103DC9cf190eD75350761e95403b7b8aFa6c0 |  |  |
+| tBTC | 0x18084fbA666a33d37592fA2633fD49a74DD93a88 |  |  |
+| WBTC | 0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599 |  |  |
+| weETH | 0xCd5fE23C85820F7B72D0926FC9b05b43E359b7ee |  |  |
+| WETH | 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2 |  |  |
+| wstETH | 0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0 |  |  |
+| ETHx | 0xA35b1B31Ce002FBF2058D22F30f95D405200A15b |  |  |
+
+#### Ethereum Mainnet - USDT Base
+
+| Contract | Address |  |  |
+| --- | --- | --- | --- |
+| cUSDTv3 | 0x3Afdc9BCA9213A35503b077a6072F3D0d5AB0840 |  |  |
+| cUSDTv3 Implementation | 0x0b4a278345DEAA4c7c61FdD2eB4AEC97e412a0d4 |  |  |
+| cUSDTv3 Ext | 0x5C58d4479A1E9b2d19EE052143FA73F0ee79A36e |  |  |
+| Configurator | 0x316f9708bB98af7dA9c68C1C3b5e79039cD336E3 |  |  |
+| Configurator Implementation | 0xcFC1fA6b7ca982176529899D99af6473aD80DF4F |  |  |
+| Proxy Admin | 0x1EC63B5883C3481134FD50D5DAebc83Ecd2E8779 |  |  |
+| Comet Factory | 0x698A949f3b4f7a5DdE236106F25Fa0eAcA0FcEF1 |  |  |
+| Rewards | 0x1B0e765F6224C21223AeA2af16c1C46E38885a40 |  |  |
+| Bulker | 0xa397a8C2086C554B531c02E29f3291c9704B00c7 |  |  |
+| Governor | 0xc0Da02939E1441F497fd74F78cE7Decb17B66529 |  |  |
+| Timelock | 0x6d903f6003cca6255D85CcA4D3B5E5146dC33925 |  |  |
+| cbBTC | 0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf |  |  |
+| COMP | 0xc00e94Cb662C3520282E6f5717214004A7f26888 |  |  |
+| LINK | 0x514910771af9ca656af840dff83e8264ecf986ca |  |  |
+| tBTC | 0x18084fbA666a33d37592fA2633fD49a74DD93a88 |  |  |
+| UNI | 0x1f9840a85d5af5bf1d1762f925bdaddc4201f984 |  |  |
+| USDT | 0xdAC17F958D2ee523a2206206994597C13D831ec7 |  |  |
+| WBTC | 0x2260fac5e5542a773aa44fbcfedf7c193bc2c599 |  |  |
+| WETH | 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2 |  |  |
+| wstETH | 0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0 |  |  |
+| wUSDM | 0x57F5E098CaD7A3D1Eed53991D4d66C45C9AF7812 |  |  |
+| sFRAX | 0xA663B02CF0a4b149d2aD41910CB81e23e1c41c32 |  |  |
+
+#### Ethereum Mainnet - wstETH Base
+
+| Contract | Address |  |  |
+| --- | --- | --- | --- |
+| cwstETHv3 | 0x3D0bb1ccaB520A66e607822fC55BC921738fAFE3 |  |  |
+| cwstETHv3 Implementation | 0x1F0aa640e4871793AC10029365febe4e8e4b1441 |  |  |
+| cwstETHv3 Ext | 0x995E394b8B2437aC8Ce61Ee0bC610D617962B214 |  |  |
+| Configurator | 0x316f9708bB98af7dA9c68C1C3b5e79039cD336E3 |  |  |
+| Configurator Implementation | 0xcFC1fA6b7ca982176529899D99af6473aD80DF4F |  |  |
+| Proxy Admin | 0x1EC63B5883C3481134FD50D5DAebc83Ecd2E8779 |  |  |
+| Comet Factory | 0x698A949f3b4f7a5DdE236106F25Fa0eAcA0FcEF1 |  |  |
+| Rewards | 0x1B0e765F6224C21223AeA2af16c1C46E38885a40 |  |  |
+| Bulker | 0x2c776041CCFe903071AF44aa147368a9c8EEA518 |  |  |
+| Governor | 0xc0Da02939E1441F497fd74F78cE7Decb17B66529 |  |  |
+| Timelock | 0x6d903f6003cca6255D85CcA4D3B5E5146dC33925 |  |  |
+| COMP | 0xc00e94Cb662C3520282E6f5717214004A7f26888 |  |  |
+| wstETH | 0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0 |  |  |
+| rsETH | 0xA1290d69c65A6Fe4DF752f95823fae25cB99e5A7 |  |  |
+| ezETH | 0xbf5495Efe5DB9ce00f80364C8B423567e58d2110 |  |  |
+
+#### Ethereum Mainnet - USDS Base
+
+| Contract | Address |  |  |
+| --- | --- | --- | --- |
+| cUSDSv3 | 0x5D409e56D886231aDAf00c8775665AD0f9897b56 |  |  |
+| cUSDSv3 Implementation | 0xBC910e3659BDB03c133961760693DB9118C05B04 |  |  |
+| cUSDSv3 Ext | 0x95DeDD64b551F05E9f59a101a519B024b6b116E7 |  |  |
+| Configurator | 0x316f9708bB98af7dA9c68C1C3b5e79039cD336E3 |  |  |
+| Configurator Implementation | 0xcFC1fA6b7ca982176529899D99af6473aD80DF4F |  |  |
+| Proxy Admin | 0x1EC63B5883C3481134FD50D5DAebc83Ecd2E8779 |  |  |
+| Comet Factory | 0x698A949f3b4f7a5DdE236106F25Fa0eAcA0FcEF1 |  |  |
+| Rewards | 0x1B0e765F6224C21223AeA2af16c1C46E38885a40 |  |  |
+| Bulker | 0xa397a8C2086C554B531c02E29f3291c9704B00c7 |  |  |
+| Governor | 0xc0Da02939E1441F497fd74F78cE7Decb17B66529 |  |  |
+| Timelock | 0x6d903f6003cca6255D85CcA4D3B5E5146dC33925 |  |  |
+| USDS | 0xdC035D45d973E3EC169d2276DDab16f1e407384F |  |  |
+| WETH | 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2 |  |  |
+| USDe | 0x4c9EDD5852cd905f086C759E8383e09bff1E68B3 |  |  |
+| cbBTC | 0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf |  |  |
+| tBTC | 0x18084fbA666a33d37592fA2633fD49a74DD93a88 |  |  |
+| wstETH | 0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0 |  |  |
+| sUSDS | 0xa3931d71877C0E7a3148CB7Eb4463524FEc27fbD |  |  |
+| COMP | 0xc00e94Cb662C3520282E6f5717214004A7f26888 |  |  |
+
+#### Polygon Mainnet - USDC Base
+
+| Contract | Address |  |  |
+| --- | --- | --- | --- |
+| cUSDCv3 | 0xF25212E676D1F7F89Cd72fFEe66158f541246445 |  |  |
+| cUSDCv3 Implementation | 0x58db165A3CC86A2955f7A270120E68236b57D819 |  |  |
+| cUSDCv3 Ext | 0xbdE8F31D2DdDA895264e27DD990faB3DC87b372d |  |  |
+| Configurator | 0x83E0F742cAcBE66349E3701B171eE2487a26e738 |  |  |
+| Configurator Implementation | 0x9c4ec768c28520B50860ea7a15bd7213a9fF58bf |  |  |
+| Proxy Admin | 0xd712ACe4ca490D4F3E92992Ecf3DE12251b975F9 |  |  |
+| Comet Factory | 0x2F9E3953b2Ef89fA265f2a32ed9F80D00229125B |  |  |
+| Timelock | 0xCC3E7c85Bb0EE4f09380e041fee95a0caeDD4a02 |  |  |
+| Bridge Receiver | 0x18281dfC4d00905DA1aaA6731414EABa843c468A |  |  |
+| Rewards | 0x45939657d1CA34A8FA39A924B71D28Fe8431e581 |  |  |
+| Bulker | 0x59e242D352ae13166B4987aE5c990C232f7f7CD6 |  |  |
+| COMP | 0x8505b9d2254A7Ae468c0E9dd10Ccea3A837aef5c |  |  |
+| MaticX | 0xfa68FB4628DFF1028CFEc22b4162FCcd0d45efb6 |  |  |
+| stMATIC | 0x3A58a54C066FdC0f2D55FC9C89F0415C92eBf3C4 |  |  |
+| USDC | 0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174 |  |  |
+| WBTC | 0x1BFD67037B42Cf73acF2047067bd4F2C47D9BfD6 |  |  |
+| WETH | 0x7ceB23fD6bC0adD59E62ac25578270cFf1b9f619 |  |  |
+| WMATIC | 0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270 |  |  |
+
+#### Polygon Mainnet - USDT Base
+
+| Contract | Address |  |  |
+| --- | --- | --- | --- |
+| cUSDTv3 | 0xaeB318360f27748Acb200CE616E389A6C9409a07 |  |  |
+| cUSDTv3 Implementation | 0x7c393180c36dC653b5Bc9ccFaAF3A87edA68Bf4d |  |  |
+| cUSDTv3 Ext | 0x2F4eAF29dfeeF4654bD091F7112926E108eF4Ed0 |  |  |
+| Configurator | 0x83E0F742cAcBE66349E3701B171eE2487a26e738 |  |  |
+| Configurator Implementation | 0x9c4ec768c28520B50860ea7a15bd7213a9fF58bf |  |  |
+| Proxy Admin | 0xd712ACe4ca490D4F3E92992Ecf3DE12251b975F9 |  |  |
+| Comet Factory | 0x2F9E3953b2Ef89fA265f2a32ed9F80D00229125B |  |  |
+| Timelock | 0xCC3E7c85Bb0EE4f09380e041fee95a0caeDD4a02 |  |  |
+| Bridge Receiver | 0x18281dfC4d00905DA1aaA6731414EABa843c468A |  |  |
+| Rewards | 0x45939657d1CA34A8FA39A924B71D28Fe8431e581 |  |  |
+| Bulker | 0x59e242D352ae13166B4987aE5c990C232f7f7CD6 |  |  |
+| COMP | 0x8505b9d2254A7Ae468c0E9dd10Ccea3A837aef5c |  |  |
+| WMATIC | 0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270 |  |  |
+| WETH | 0x7ceB23fD6bC0adD59E62ac25578270cFf1b9f619 |  |  |
+| MaticX | 0xfa68FB4628DFF1028CFEc22b4162FCcd0d45efb6 |  |  |
+| stMATIC | 0x3A58a54C066FdC0f2D55FC9C89F0415C92eBf3C4 |  |  |
+| WBTC | 0x1BFD67037B42Cf73acF2047067bd4F2C47D9BfD6 |  |  |
+| USDT | 0xc2132D05D31c914a87C6611C10748AEb04B58e8F |  |  |
+
+#### Arbitrum - USDC.e Base (Bridged)
+
+| Contract | Address |  |  |
+| --- | --- | --- | --- |
+| cUSDCv3 | 0xA5EDBDD9646f8dFF606d7448e414884C7d905dCA |  |  |
+| cUSDCv3 Implementation | 0x9aB958D306Beb81711e5f5CA0731C1E4772dF9cb |  |  |
+| cUSDCv3 Ext | 0x1B2E88cC7365d90e7E81392432482925BD8437E9 |  |  |
+| Configurator | 0xb21b06D71c75973babdE35b49fFDAc3F82Ad3775 |  |  |
+| Configurator Implementation | 0x8495AF03fb797E2965bCB42Cb0693e1c15614798 |  |  |
+| Proxy Admin | 0xD10b40fF1D92e2267D099Da3509253D9Da4D715e |  |  |
+| Comet Factory | 0xe2AA5194E45B043AfdD6E98F467c0B1c13484ae9 |  |  |
+| Timelock | 0x3fB4d38ea7EC20D91917c09591490Eeda38Cf88A |  |  |
+| Bridge Receiver | 0x42480C37B249e33aABaf4c22B20235656bd38068 |  |  |
+| Rewards | 0x88730d254A2f7e6AC8388c3198aFd694bA9f7fae |  |  |
+| Bulker | 0xbdE8F31D2DdDA895264e27DD990faB3DC87b372d |  |  |
+| ARB | 0x912ce59144191c1204e64559fe8253a0e49e6548 |  |  |
+| COMP | 0x354A6dA3fcde098F8389cad84b0182725c6C91dE |  |  |
+| GMX | 0xfc5A1A6EB076a2C7aD06eD22C90d7E710E35ad0a |  |  |
+| USDC.e | 0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8 |  |  |
+| WBTC | 0x2f2a2543b76a4166549f7aab2e75bef0aefc5b0f |  |  |
+| WETH | 0x82af49447d8a07e3bd95bd0d56f35241523fbab1 |  |  |
+
+#### Arbitrum - USDC Base (Native)
+
+| Contract | Address |  |  |
+| --- | --- | --- | --- |
+| cUSDCv3 | 0x9c4ec768c28520B50860ea7a15bd7213a9fF58bf |  |  |
+| cUSDCv3 Implementation | 0xF25212E676D1F7F89Cd72fFEe66158f541246445 |  |  |
+| cUSDCv3 Ext | 0x1B2E88cC7365d90e7E81392432482925BD8437E9 |  |  |
+| Configurator | 0xb21b06D71c75973babdE35b49fFDAc3F82Ad3775 |  |  |
+| Configurator Implementation | 0x8495AF03fb797E2965bCB42Cb0693e1c15614798 |  |  |
+| Proxy Admin | 0xD10b40fF1D92e2267D099Da3509253D9Da4D715e |  |  |
+| Comet Factory | 0xe2AA5194E45B043AfdD6E98F467c0B1c13484ae9 |  |  |
+| Timelock | 0x3fB4d38ea7EC20D91917c09591490Eeda38Cf88A |  |  |
+| Bridge Receiver | 0x42480C37B249e33aABaf4c22B20235656bd38068 |  |  |
+| Rewards | 0x88730d254A2f7e6AC8388c3198aFd694bA9f7fae |  |  |
+| Bulker | 0xbdE8F31D2DdDA895264e27DD990faB3DC87b372d |  |  |
+| ARB | 0x912ce59144191c1204e64559fe8253a0e49e6548 |  |  |
+| COMP | 0x354A6dA3fcde098F8389cad84b0182725c6C91dE |  |  |
+| GMX | 0xfc5A1A6EB076a2C7aD06eD22C90d7E710E35ad0a |  |  |
+| USDC | 0xaf88d065e77c8cC2239327C5EDb3A432268e5831 |  |  |
+| WBTC | 0x2f2a2543b76a4166549f7aab2e75bef0aefc5b0f |  |  |
+| ezETH | 0x2416092f143378750bb29b79eD961ab195CcEea5 |  |  |
+| WETH | 0x82af49447d8a07e3bd95bd0d56f35241523fbab1 |  |  |
+
+#### Arbitrum - WETH base
+
+| Contract | Address |  |  |
+| --- | --- | --- | --- |
+| cWETHv3 | 0x6f7D514bbD4aFf3BcD1140B7344b32f063dEe486 |  |  |
+| cWETHv3 Implementation | 0x8df378453ff9deffa513367cdf9b3b53726303e9 |  |  |
+| cWETHv3 Ext | 0x5404872d8f2e24b230EC9B9eC64E3855F637FB93 |  |  |
+| Configurator | 0xb21b06D71c75973babdE35b49fFDAc3F82Ad3775 |  |  |
+| Configurator Implementation | 0x8495AF03fb797E2965bCB42Cb0693e1c15614798 |  |  |
+| Proxy Admin | 0xD10b40fF1D92e2267D099Da3509253D9Da4D715e |  |  |
+| Comet Factory | 0xe2AA5194E45B043AfdD6E98F467c0B1c13484ae9 |  |  |
+| Timelock | 0x3fB4d38ea7EC20D91917c09591490Eeda38Cf88A |  |  |
+| Bridge Receiver | 0x42480C37B249e33aABaf4c22B20235656bd38068 |  |  |
+| Rewards | 0x88730d254A2f7e6AC8388c3198aFd694bA9f7fae |  |  |
+| Bulker | 0xbdE8F31D2DdDA895264e27DD990faB3DC87b372d |  |  |
+| COMP | 0x354A6dA3fcde098F8389cad84b0182725c6C91dE |  |  |
+| rETH | 0xEC70Dcb4A1EFa46b8F2D97C310C9c4790ba5ffA8 |  |  |
+| wstETH | 0x5979D7b546E38E414F7E9822514be443A4800529 |  |  |
+| WBTC | 0x2f2a2543B76A4166549F7aaB2e75Bef0aefC5B0f |  |  |
+| ezETH | 0x2416092f143378750bb29b79eD961ab195CcEea5 |  |  |
+| rsETH | 0x4186BFC76E2E237523CBC30FD220FE055156b41F |  |  |
+| USDT | 0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9 |  |  |
+| USDC | 0xaf88d065e77c8cC2239327C5EDb3A432268e5831 |  |  |
+| WETH | 0x82aF49447D8a07e3bd95BD0d56f35241523fBab1 |  |  |
+
+#### Arbitrum - USDT base
+
+| Contract | Address |  |  |
+| --- | --- | --- | --- |
+| cUSDTv3 | 0xd98Be00b5D27fc98112BdE293e487f8D4cA57d07 |  |  |
+| cUSDTv3 Implementation | 0x4FD427B852989F66B10d6B5552a08E0f9C8e5B80 |  |  |
+| cUSDTv3 Ext | 0x698A949f3b4f7a5DdE236106F25Fa0eAcA0FcEF1 |  |  |
+| Configurator | 0xb21b06D71c75973babdE35b49fFDAc3F82Ad3775 |  |  |
+| Configurator Implementation | 0x8495AF03fb797E2965bCB42Cb0693e1c15614798 |  |  |
+| Proxy Admin | 0xD10b40fF1D92e2267D099Da3509253D9Da4D715e |  |  |
+| Comet Factory | 0xe2AA5194E45B043AfdD6E98F467c0B1c13484ae9 |  |  |
+| Timelock | 0x3fB4d38ea7EC20D91917c09591490Eeda38Cf88A |  |  |
+| Bridge Receiver | 0x42480C37B249e33aABaf4c22B20235656bd38068 |  |  |
+| Rewards | 0x88730d254A2f7e6AC8388c3198aFd694bA9f7fae |  |  |
+| Bulker | 0xbdE8F31D2DdDA895264e27DD990faB3DC87b372d |  |  |
+| COMP | 0x354A6dA3fcde098F8389cad84b0182725c6C91dE |  |  |
+| ARB | 0x912ce59144191c1204e64559fe8253a0e49e6548 |  |  |
+| WETH | 0x82af49447d8a07e3bd95bd0d56f35241523fbab1 |  |  |
+| wstETH | 0x5979D7b546E38E414F7E9822514be443A4800529 |  |  |
+| WBTC | 0x2f2a2543b76a4166549f7aab2e75bef0aefc5b0f |  |  |
+| GMX | 0xfc5A1A6EB076a2C7aD06eD22C90d7E710E35ad0a |  |  |
+| USDT | 0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9 |  |  |
+
+#### Base - USDC Base (Native)
+
+| Contract | Address |  |  |
+| --- | --- | --- | --- |
+| cUSDCv3 | 0xb125E6687d4313864e53df431d5425969c15Eb2F |  |  |
+| cUSDCv3 Implementation | 0x23684254bc5077c79F166E77D22F516f86d8023a |  |  |
+| cUSDCv3 Ext | 0x3bac64185786922292266AA92a58cf870D694E2a |  |  |
+| Configurator | 0x45939657d1CA34A8FA39A924B71D28Fe8431e581 |  |  |
+| Configurator Implementation | 0x83E0F742cAcBE66349E3701B171eE2487a26e738 |  |  |
+| Proxy Admin | 0xbdE8F31D2DdDA895264e27DD990faB3DC87b372d |  |  |
+| Comet Factory | 0x27C348936400791b7350d80Fb81Bc61Ad68dF4AE |  |  |
+| Timelock | 0xCC3E7c85Bb0EE4f09380e041fee95a0caeDD4a02 |  |  |
+| Bridge Receiver | 0x18281dfC4d00905DA1aaA6731414EABa843c468A |  |  |
+| Rewards | 0x123964802e6ABabBE1Bc9547D72Ef1B69B00A6b1 |  |  |
+| Bulker | 0x78D0677032A35c63D142a48A2037048871212a8C |  |  |
+| USDC | 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913 |  |  |
+| cbBTC | 0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf |  |  |
+| cbETH | 0x2Ae3F1Ec7F1F5012CFEab0185bfc7aa3cf0DEc22 |  |  |
+| COMP | 0x9e1028F5F1D5eDE59748FFceE5532509976840E0 |  |  |
+| WETH | 0x4200000000000000000000000000000000000006 |  |  |
+| wstETH | 0xc1CBa3fCea344f92D9239c08C0568f6F2F0ee452 |  |  |
+
+#### Base - USDbC Base (Bridged)
+
+| Contract | Address |  |  |
+| --- | --- | --- | --- |
+| cUSDbCv3 | 0x9c4ec768c28520B50860ea7a15bd7213a9fF58bf |  |  |
+| cUSDbCv3 Implementation | 0x3Ab91391221204372DC9FE5E3D4516d03988E8B8 |  |  |
+| cUSDbCv3 Ext | 0x2F9E3953b2Ef89fA265f2a32ed9F80D00229125B |  |  |
+| Configurator | 0x45939657d1CA34A8FA39A924B71D28Fe8431e581 |  |  |
+| Configurator Implementation | 0x83E0F742cAcBE66349E3701B171eE2487a26e738 |  |  |
+| Proxy Admin | 0xbdE8F31D2DdDA895264e27DD990faB3DC87b372d |  |  |
+| Comet Factory | 0x27C348936400791b7350d80Fb81Bc61Ad68dF4AE |  |  |
+| Timelock | 0xCC3E7c85Bb0EE4f09380e041fee95a0caeDD4a02 |  |  |
+| Bridge Receiver | 0x18281dfC4d00905DA1aaA6731414EABa843c468A |  |  |
+| Rewards | 0x123964802e6ABabBE1Bc9547D72Ef1B69B00A6b1 |  |  |
+| Bulker | 0x78D0677032A35c63D142a48A2037048871212a8C |  |  |
+| USDbC | 0xd9aAEc86B65D86f6A7B5B1b0c42FFA531710b6CA |  |  |
+| cbETH | 0x2Ae3F1Ec7F1F5012CFEab0185bfc7aa3cf0DEc22 |  |  |
+| COMP | 0x9e1028F5F1D5eDE59748FFceE5532509976840E0 |  |  |
+| WETH | 0x4200000000000000000000000000000000000006 |  |  |
+
+#### Base - WETH Base
+
+| Contract | Address |  |  |
+| --- | --- | --- | --- |
+| cWETHv3 | 0x46e6b214b524310239732D51387075E0e70970bf |  |  |
+| cWETHv3 Implementation | 0x1f9d71Ef69f502188eC65ceBAc049fe646B74De4 |  |  |
+| cWETHv3 Ext | 0x88bB8C109640778D3fB1074bB10a66e31F2c9c17 |  |  |
+| Configurator | 0x45939657d1CA34A8FA39A924B71D28Fe8431e581 |  |  |
+| Configurator Implementation | 0x83E0F742cAcBE66349E3701B171eE2487a26e738 |  |  |
+| Proxy Admin | 0xbdE8F31D2DdDA895264e27DD990faB3DC87b372d |  |  |
+| Comet Factory | 0x27C348936400791b7350d80Fb81Bc61Ad68dF4AE |  |  |
+| Timelock | 0xCC3E7c85Bb0EE4f09380e041fee95a0caeDD4a02 |  |  |
+| Bridge Receiver | 0x18281dfC4d00905DA1aaA6731414EABa843c468A |  |  |
+| Rewards | 0x123964802e6ABabBE1Bc9547D72Ef1B69B00A6b1 |  |  |
+| Bulker | 0x78D0677032A35c63D142a48A2037048871212a8C |  |  |
+| cbBTC | 0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf |  |  |
+| cbETH | 0x2Ae3F1Ec7F1F5012CFEab0185bfc7aa3cf0DEc22 |  |  |
+| COMP | 0x9e1028F5F1D5eDE59748FFceE5532509976840E0 |  |  |
+| ezETH | 0x2416092f143378750bb29b79eD961ab195CcEea5 |  |  |
+| USDC | 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913 |  |  |
+| weETH | 0x04C0599Ae5A44757c0af6F9eC3b93da8976c150A |  |  |
+| WETH | 0x4200000000000000000000000000000000000006 |  |  |
+| wrsETH | 0xEDfa23602D0EC14714057867A78d01e94176BEA0 |  |  |
+| wstETH | 0xc1CBa3fCea344f92D9239c08C0568f6F2F0ee452 |  |  |
+
+#### Base - AERO Base
+
+| Contract | Address |  |  |
+| --- | --- | --- | --- |
+| cAEROv3 | 0x784efeB622244d2348d4F2522f8860B96fbEcE89 |  |  |
+| cAEROv3 Implementation | 0x4a2a0abd2a5cf1b07e4dfad5a7708f432cafec22 |  |  |
+| cAEROv3 Ext | 0x6f7D514bbD4aFf3BcD1140B7344b32f063dEe486 |  |  |
+| Configurator | 0x45939657d1CA34A8FA39A924B71D28Fe8431e581 |  |  |
+| Configurator Implementation | 0x83E0F742cAcBE66349E3701B171eE2487a26e738 |  |  |
+| Proxy Admin | 0xbdE8F31D2DdDA895264e27DD990faB3DC87b372d |  |  |
+| Comet Factory | 0x27C348936400791b7350d80Fb81Bc61Ad68dF4AE |  |  |
+| Timelock | 0xCC3E7c85Bb0EE4f09380e041fee95a0caeDD4a02 |  |  |
+| Bridge Receiver | 0x18281dfC4d00905DA1aaA6731414EABa843c468A |  |  |
+| Rewards | 0x123964802e6ABabBE1Bc9547D72Ef1B69B00A6b1 |  |  |
+| Bulker | 0x78D0677032A35c63D142a48A2037048871212a8C |  |  |
+| AERO | 0x940181a94A35A4569E4529A3CDfB74e38FD98631 |  |  |
+| WETH | 0x4200000000000000000000000000000000000006 |  |  |
+| USDC | 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913 |  |  |
+| wstETH | 0xc1CBa3fCea344f92D9239c08C0568f6F2F0ee452 |  |  |
+| cbBTC | 0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf |  |  |
+| COMP | 0x9e1028F5F1D5eDE59748FFceE5532509976840E0 |  |  |
+
+#### Scroll - USDC Base
+
+| Contract | Address |  |  |
+| --- | --- | --- | --- |
+| cUSDCv3 | 0xB2f97c1Bd3bf02f5e74d13f02E3e26F93D77CE44 |  |  |
+| cUSDCv3 Implementation | 0x487D668AbaFD140A634C657E544Fe752Db727295 |  |  |
+| cUSDCv3 Ext | 0x27E24C49f95DfF7E231eF1C2849F760cDF25a5Ad |  |  |
+| Configurator | 0xECAB0bEEa3e5DEa0c35d3E69468EAC20098032D7 |  |  |
+| Configurator Implementation | 0x77831F8997De34ead958DA207e43e4be70771C79 |  |  |
+| Proxy Admin | 0x87A27b91f4130a25E9634d23A5B8E05e342bac50 |  |  |
+| Comet Factory | 0x85Bfa13eB2BC22A742Ca552566131d31677Bd41e |  |  |
+| Timelock | 0xF6013e80E9e6AC211Cc031ad1CE98B3Aa20b73E4 |  |  |
+| Bridge Receiver | 0xC6bf5A64896D679Cf89843DbeC6c0f5d3C9b610D |  |  |
+| Rewards | 0x70167D30964cbFDc315ECAe02441Af747bE0c5Ee |  |  |
+| Bulker | 0x53C6D04e3EC7031105bAeA05B36cBc3C987C56fA |  |  |
+| COMP | 0x643e160a3C3E2B7eae198f0beB1BfD2441450e86 |  |  |
+| USDC | 0x06eFdBFf2a14a7c8E15944D1F4A48F9F95F663A4 |  |  |
+| wstETH | 0xf610A9dfB7C89644979b4A0f27063E9e7d7Cda32 |  |  |
+| WETH | 0x5300000000000000000000000000000000000004 |  |  |
+
+#### Optimism - USDC Base
+
+| Contract | Address |  |  |
+| --- | --- | --- | --- |
+| cUSDCv3 | 0x2e44e174f7D53F0212823acC11C01A11d58c5bCB |  |  |
+| cUSDCv3 Implementation | 0xE1a85c066897eEd564F1167eE5F0e522A59d4a3F |  |  |
+| cUSDCv3 Ext | 0xE802a0b833f6080FEB46DD54c75444c5dba0c873 |  |  |
+| Configurator | 0x84E93EC6170ED630f5ebD89A1AAE72d4F63f2713 |  |  |
+| Configurator Implementation | 0x371DB45c7ee248dAFf4Dc1FFB67A20faa0ecFE02 |  |  |
+| Proxy Admin | 0x24D86Da09C4Dd64e50dB7501b0f695d030f397aF |  |  |
+| Comet Factory | 0xFa454dE61b317b6535A0C462267208E8FdB89f45 |  |  |
+| Timelock | 0xd98Be00b5D27fc98112BdE293e487f8D4cA57d07 |  |  |
+| Market Admin Permission Checker | 0x62dd0452411113404cf9a7fe88a5e6e86f9b71a6 |  |  |
+| Market Admin Update Timelock | 0x81Bc6016Fa365bfE929a51Eec9217B441B598eC6 |  |  |
+| Market Admin Update Proposer | 0xB6Ef3AC71E9baCF1F4b9426C149d855Bfc4415F9 |  |  |
+| Bridge Receiver | 0xC3a73A70d1577CD5B02da0bA91C0Afc8fA434DAF |  |  |
+| Rewards | 0x443EA0340cb75a160F31A440722dec7b5bc3C2E9 |  |  |
+| Bulker | 0xcb3643CC8294B23171272845473dEc49739d4Ba3 |  |  |
+| OP | 0x4200000000000000000000000000000000000042 |  |  |
+| WETH | 0x4200000000000000000000000000000000000006 |  |  |
+| WBTC | 0x68f180fcCe6836688e9084f035309E29Bf0A2095 |  |  |
+| wstETH | 0x1F32b1c2345538c0c6f582fCB022739c4A194Ebb |  |  |
+| COMP | 0x7e7d4467112689329f7E06571eD0E8CbAd4910eE |  |  |
+| wUSDM | 0x57f5e098cad7a3d1eed53991d4d66c45c9af7812 |  |  |
+| USDC | 0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85 |  |  |
+
+#### Optimism - USDT Base
+
+| Contract | Address |  |  |
+| --- | --- | --- | --- |
+| cUSDTv3 | 0x995E394b8B2437aC8Ce61Ee0bC610D617962B214 |  |  |
+| cUSDTv3 Implementation | 0xF7C866a35448f28397e35425B8E2DD655D1c00e0 |  |  |
+| cUSDTv3 Ext | 0xC49399814452B41dA8a7cd76a159f5515cb3e493 |  |  |
+| Configurator | 0x84E93EC6170ED630f5ebD89A1AAE72d4F63f2713 |  |  |
+| Configurator Implementation | 0x371DB45c7ee248dAFf4Dc1FFB67A20faa0ecFE02 |  |  |
+| Proxy Admin | 0x24D86Da09C4Dd64e50dB7501b0f695d030f397aF |  |  |
+| Comet Factory | 0xFa454dE61b317b6535A0C462267208E8FdB89f45 |  |  |
+| Timelock | 0xd98Be00b5D27fc98112BdE293e487f8D4cA57d07 |  |  |
+| Market Admin Permission Checker | 0x62dd0452411113404cf9a7fe88a5e6e86f9b71a6 |  |  |
+| Market Admin Update Timelock | 0x81Bc6016Fa365bfE929a51Eec9217B441B598eC6 |  |  |
+| Market Admin Update Proposer | 0xB6Ef3AC71E9baCF1F4b9426C149d855Bfc4415F9 |  |  |
+| Bridge Receiver | 0xC3a73A70d1577CD5B02da0bA91C0Afc8fA434DAF |  |  |
+| Rewards | 0x443EA0340cb75a160F31A440722dec7b5bc3C2E9 |  |  |
+| Bulker | 0xcb3643CC8294B23171272845473dEc49739d4Ba3 |  |  |
+| COMP | 0x7e7d4467112689329f7E06571eD0E8CbAd4910eE |  |  |
+| OP | 0x4200000000000000000000000000000000000042 |  |  |
+| WETH | 0x4200000000000000000000000000000000000006 |  |  |
+| WBTC | 0x68f180fcCe6836688e9084f035309E29Bf0A2095 |  |  |
+| wstETH | 0x1F32b1c2345538c0c6f582fCB022739c4A194Ebb |  |  |
+| wUSDM | 0x57F5E098CaD7A3D1Eed53991D4d66C45C9AF7812 |  |  |
+| USDT | 0x94b008aA00579c1307B0EF2c499aD98a8ce58e58 |  |  |
+
+#### Optimism - WETH Base
+
+| Contract | Address |  |  |
+| --- | --- | --- | --- |
+| cWETHv3 | 0xE36A30D249f7761327fd973001A32010b521b6Fd |  |  |
+| cWETHv3 Implementation | 0x377Fc4efA52a0d7160a236D4A8CDDb105fd2C2F7 |  |  |
+| cWETHv3 Ext | 0x82B8d9A06ccABC1e9B0c0A00f38B858E6925CF2f |  |  |
+| Configurator | 0x84E93EC6170ED630f5ebD89A1AAE72d4F63f2713 |  |  |
+| Configurator Implementation | 0x371DB45c7ee248dAFf4Dc1FFB67A20faa0ecFE02 |  |  |
+| Proxy Admin | 0x24D86Da09C4Dd64e50dB7501b0f695d030f397aF |  |  |
+| Comet Factory | 0xFa454dE61b317b6535A0C462267208E8FdB89f45 |  |  |
+| Timelock | 0xd98Be00b5D27fc98112BdE293e487f8D4cA57d07 |  |  |
+| Market Admin Permission Checker | 0x62dd0452411113404cf9a7fe88a5e6e86f9b71a6 |  |  |
+| Market Admin Update Timelock | 0x81Bc6016Fa365bfE929a51Eec9217B441B598eC6 |  |  |
+| Market Admin Update Proposer | 0xB6Ef3AC71E9baCF1F4b9426C149d855Bfc4415F9 |  |  |
+| Bridge Receiver | 0xC3a73A70d1577CD5B02da0bA91C0Afc8fA434DAF |  |  |
+| Rewards | 0x443EA0340cb75a160F31A440722dec7b5bc3C2E9 |  |  |
+| Bulker | 0xcb3643CC8294B23171272845473dEc49739d4Ba3 |  |  |
+| COMP | 0x7e7d4467112689329f7E06571eD0E8CbAd4910eE |  |  |
+| ezETH | 0x2416092f143378750bb29b79eD961ab195CcEea5 |  |  |
+| rETH | 0x9Bcef72be871e61ED4fBbc7630889beE758eb81D |  |  |
+| USDC | 0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85 |  |  |
+| USDT | 0x94b008aA00579c1307B0EF2c499aD98a8ce58e58 |  |  |
+| WBTC | 0x68f180fcCe6836688e9084f035309E29Bf0A2095 |  |  |
+| weETH | 0x346e03F8Cce9fE01dCB3d0Da3e9D00dC2c0E08f0 |  |  |
+| WETH | 0x4200000000000000000000000000000000000006 |  |  |
+| wrsETH | 0x87eee96d50fb761ad85b1c982d28a042169d61b1 |  |  |
+| wstETH | 0x1F32b1c2345538c0c6f582fCB022739c4A194Ebb |  |  |
+
+#### Mantle - USDe Base
+
+| Contract | Address |  |  |
+| --- | --- | --- | --- |
+| cUSDev3 | 0x606174f62cd968d8e684c645080fa694c1D7786E |  |  |
+| cUSDev3 Implementation | 0x8CdA82AAa39a63b26C0E5B606bD32B49567D41a1 |  |  |
+| cUSDev3 Ext | 0xf528B4bCAc12dad0bFa114282b219ad706bA7f18 |  |  |
+| Configurator | 0xb77Cd4cD000957283D8BAf53cD782ECf029cF7DB |  |  |
+| Configurator Implementation | 0x3c851CbE2740747f5cE4e8894842A313e5A3aee3 |  |  |
+| Proxy Admin | 0xe268B436E75648aa0639e2088fa803feA517a0c7 |  |  |
+| Comet Factory | 0x5a1d1C89Da75Bc957BBF9ED61b4B0AdEe0553285 |  |  |
+| Timelock | 0x16C7B5C1b10489F4B111af11de2Bd607c9728107 |  |  |
+| Bridge Receiver | 0xc91EcA15747E73d6dd7f616C49dAFF37b9F1B604 |  |  |
+| Rewards | 0xCd83CbBFCE149d141A5171C3D6a0F0fCCeE225Ab |  |  |
+| Bulker | 0x67DFCa85CcEEFA2C5B1dB4DEe3BEa716A28B9baa |  |  |
+| COMP | 0x52b7D8851d6CcBC6342ba0855Be65f7B82A3F17f |  |  |
+| USDe | 0x5d3a1Ff2b6BAb83b63cd9AD0787074081a52ef34 |  |  |
+| mETH | 0xcDA86A272531e8640cD7F1a92c01839911B90bb0 |  |  |
+| WETH | 0xdEAddEaDdeadDEadDEADDEAddEADDEAddead1111 |  |  |
+
+#### Ethereum Sepolia Testnet - USDC Base
+
+| Contract | Address |  |  |
+| --- | --- | --- | --- |
+| cUSDCv3 | 0xAec1F48e02Cfb822Be958B68C7957156EB3F0b6e |  |  |
+| cUSDCv3 Implementation | 0xE3E0106227181958aBfbA960C13d0Fe52c733265 |  |  |
+| cUSDCv3 Ext | 0xdCbDb7306c6Ff46f77B349188dC18cEd9DF30299 |  |  |
+| Configurator | 0xc28aD44975C614EaBe0Ed090207314549e1c6624 |  |  |
+| Configurator Implementation | 0x2b03014AeEe8DD46de4464da41e7dF9BD154cd66 |  |  |
+| Proxy Admin | 0x9e9fA093aa60db36c4E8a01EBf4718095b6e37f0 |  |  |
+| Comet Factory | 0x91663d91795049C3D4afC85A7d0AdB15238750aa |  |  |
+| Rewards | 0x8bF5b658bdF0388E8b482ED51B14aef58f90abfD |  |  |
+| Bulker | 0x157c001bb1F8b33743B14483Be111C961d8e11dE |  |  |
+| Faucet | 0x68793eA49297eB75DFB4610B68e076D2A5c7646C |  |  |
+| USDC | 0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238 |  |  |
+| COMP | 0xA6c8D1c55951e8AC44a0EaA959Be5Fd21cc07531 |  |  |
+| WBTC | 0xa035b9e130F2B1AedC733eEFb1C67Ba4c503491F |  |  |
+| WETH | 0x2D5ee574e710219a521449679A4A7f2B43f046ad |  |  |
+
+#### Ethereum Sepolia Testnet - WETH Base
+
+| Contract | Address |  |  |
+| --- | --- | --- | --- |
+| cWETHv3 | 0x2943ac1216979aD8dB76D9147F64E61adc126e96 |  |  |
+| cWETHv3 Implementation | 0x149F2D15f3822C0C935a9c99ddfb804611586cAc |  |  |
+| cWETHv3 Ext | 0xD0b7551E480c101fa9cf3fe0887cCBe59f16216B |  |  |
+| Configurator | 0xc28aD44975C614EaBe0Ed090207314549e1c6624 |  |  |
+| Configurator Implementation | 0x2b03014AeEe8DD46de4464da41e7dF9BD154cd66 |  |  |
+| Proxy Admin | 0x9e9fA093aa60db36c4E8a01EBf4718095b6e37f0 |  |  |
+| Comet Factory | 0x91663d91795049C3D4afC85A7d0AdB15238750aa |  |  |
+| Rewards | 0x8bF5b658bdF0388E8b482ED51B14aef58f90abfD |  |  |
+| Bulker | 0xaD0C044425D81a2E223f4CE699156900fead2Aaa |  |  |
+| Faucet | 0x68793eA49297eB75DFB4610B68e076D2A5c7646C |  |  |
+| cbETH | 0xb9fa8F5eC3Da13B508F462243Ad0555B46E028df |  |  |
+| COMP | 0xA6c8D1c55951e8AC44a0EaA959Be5Fd21cc07531 |  |  |
+| stETH | 0x3e3FE7dBc6B4C189E7128855dD526361c49b40Af |  |  |
+| wstETH | 0xB82381A3fBD3FaFA77B3a7bE693342618240067b |  |  |
+| WETH | 0x2D5ee574e710219a521449679A4A7f2B43f046ad |  |  |
+
+#### Polygon Mumbai Testnet - USDC Base
+
+| Contract | Address |  |  |
+| --- | --- | --- | --- |
+| cUSDCv3 | 0xF09F0369aB0a875254fB565E52226c88f10Bc839 |  |  |
+| cUSDCv3 Implementation | 0x6Cd33556D458aC78Cc17b55Eb75B17d23E4deE57 |  |  |
+| cUSDCv3 Ext | 0x1c3080d7fd5c97A58E0F2EA19e9Eec4745dC4BDe |  |  |
+| Configurator | 0x64550801B8bf3BF4D8792d46D8903F82e2EC95A9 |  |  |
+| Configurator Implementation | 0xA5615c22c3Ab520A77b29F3d32C2831156dFbE7B |  |  |
+| Proxy Admin | 0xfE14E3BdCADDe7ccD3c8EeE3CcC11e3FC8184E47 |  |  |
+| Comet Factory | 0x9F7Ac7A36902414Dd4D280E79C5B10162882F0Ba |  |  |
+| Timelock | 0x90b1f90Ed6477d5Ee1Ff14Bef670266DaE9eEb92 |  |  |
+| Bridge Receiver | 0xe195d2cBf7f20E40Cf701a9fA3F01fE89bA5a1da |  |  |
+| Rewards | 0x0785f2AC0dCBEDEE4b8D62c25A34098E9A0dF4bB |  |  |
+| Bulker | 0x990D086E52B132f5b4f769829612F756a4a20bb8 |  |  |
+| Faucet | 0x1Cea3a83BA17692cEa8DB37D72446f014480F3bE |  |  |
+| DAI | 0x4DAFE12E1293D889221B1980672FE260Ac9dDd28 |  |  |
+| USDC | 0xDB3cB4f2688daAB3BFf59C24cC42D4B6285828e9 |  |  |
+| WETH | 0xE1e67212B1A4BF629Bdf828e08A3745307537ccE |  |  |
+| WBTC | 0x4B5A0F4E00bC0d6F16A593Cae27338972614E713 |  |  |
+| WMATIC | 0xfec23a9E1DBA805ADCF55E0338Bf5E03488FC7Fb |  |  |
+
+#### Base Sepolia - USDC Base
+
+| Contract | Address |  |  |
+| --- | --- | --- | --- |
+| cUSDCv3 | 0x571621Ce60Cebb0c1D442B5afb38B1663C6Bf017 |  |  |
+| cUSDCv3 Implementation | 0xe85D00f657F78c799ec4E9CAFd951ce5891bAde8 |  |  |
+| cUSDCv3 Ext | 0x7F8dB47259a6b4461C53eBD230C9161B01B7160E |  |  |
+| Configurator | 0x090a2b1fc84d0b5141d5D5608b12Db19201aE5a6 |  |  |
+| Configurator Implementation | 0x62a8ddF40c1fd8B76Cb643fB967912783deBfd79 |  |  |
+| Proxy Admin | 0x45f6ceDa8ba0e6c9E998ee932e39da40B4e3D438 |  |  |
+| Comet Factory | 0xBA7Ef8536998e22503530E59416717c7D3fEbCA9 |  |  |
+| Timelock | 0xb2A7676bA3A258E710c7092B5E763d6f037c1d02 |  |  |
+| Bridge Receiver | 0x80c116493DB619560e3380D0fF195e749D8857D7 |  |  |
+| Rewards | 0x3394fa1baCC0b47dd0fF28C8573a476a161aF7BC |  |  |
+| Bulker | 0x7D25b2AecF07B5CB87B05e17Aa5cecbA8BCfDBD1 |  |  |
+| Faucet | 0xD76cB57d8B097B80a6eE4D1b4d5ef872bfBa6051 |  |  |
+| USDC | 0x036CbD53842c5426634e7929541eC2318f3dCF7e |  |  |
+| cbETH | 0x774eD9EDB0C5202dF9A86183804b5D9E99dC6CA3 |  |  |
+| COMP | 0x2f535da74048c0874400f0371Fba20DF983A56e2 |  |  |
+| WETH | 0x4200000000000000000000000000000000000006 |  |  |
+
+#### Base Sepolia - WETH Base
+
+| Contract | Address |  |  |
+| --- | --- | --- | --- |
+| cWETHv3 | 0x61490650AbaA31393464C3f34E8B29cd1C44118E |  |  |
+| cWETHv3 Implementation | 0xa78f909c0F0dA420e15A1cFa3Be578dB5AE5799E |  |  |
+| cWETHv3 Ext | 0xe28860fBB866751b0c0CB07ce1BA54F467b19B03 |  |  |
+| Configurator | 0x090a2b1fc84d0b5141d5D5608b12Db19201aE5a6 |  |  |
+| Configurator Implementation | 0x62a8ddF40c1fd8B76Cb643fB967912783deBfd79 |  |  |
+| Proxy Admin | 0x45f6ceDa8ba0e6c9E998ee932e39da40B4e3D438 |  |  |
+| Comet Factory | 0xBA7Ef8536998e22503530E59416717c7D3fEbCA9 |  |  |
+| Timelock | 0xb2A7676bA3A258E710c7092B5E763d6f037c1d02 |  |  |
+| Bridge Receiver | 0x80c116493DB619560e3380D0fF195e749D8857D7 |  |  |
+| Rewards | 0x3394fa1baCC0b47dd0fF28C8573a476a161aF7BC |  |  |
+| Bulker | 0x7D25b2AecF07B5CB87B05e17Aa5cecbA8BCfDBD1 |  |  |
+| Faucet | 0xD76cB57d8B097B80a6eE4D1b4d5ef872bfBa6051 |  |  |
+| cbETH | 0x774eD9EDB0C5202dF9A86183804b5D9E99dC6CA3 |  |  |
+| COMP | 0x2f535da74048c0874400f0371Fba20DF983A56e2 |  |  |
+| WETH | 0x4200000000000000000000000000000000000006 |  |  |
+
+### Protocol Contracts
+
+#### cUSDCv3
+
+This is the main proxy contract for interacting with the first Compound III market. The address is fixed and independent from future upgrades to the market. It is an [OpenZeppelin TransparentUpgradeableProxy contract](https://docs.openzeppelin.com/contracts/4.x/api/proxy).
+
+#### cUSDCv3 Implementation
+
+This is the implementation of the market logic contract, as deployed by the Comet Factory via the Configurator.
+
+Do not interact with this contract directly; instead use the cUSDCv3 proxy address with the Comet Interface ABI.
+
+#### cUSDCv3 Ext
+
+This is an extension of the market logic contract which supports some auxiliary/independent interfaces for the protocol. This is used to add additional functionality without requiring contract space in the main protocol contract.
+
+Do not interact with this contract directly; instead use the cUSDCv3 proxy address with the Comet Interface ABI.
+
+#### Configurator
+
+This is a [proxy](https://docs.openzeppelin.com/contracts/4.x/api/proxy#TransparentUpgradeableProxy) contract for the `configurator`, which is used to set and update parameters of a Comet proxy contract. The configurator deploys implementations of the Comet logic contract according to its configuration. This pattern allows significant gas savings for users of the protocol by ‘constantizing’ the parameters of the protocol.
+
+#### Configurator Implementation
+
+This is the implementation of the Configurator contract, which can also be upgraded to support unforeseen changes to the protocol.
+
+#### Proxy Admin
+
+This is the admin of the Comet and Configurator proxy contracts. It is a [ProxyAdmin](https://docs.openzeppelin.com/contracts/4.x/api/proxy#ProxyAdmin) as recommended/implemented by OpenZeppelin according to their upgradeability pattern.
+
+#### Comet Factory
+
+This is the factory contract capable of producing instances of the Comet implementation/logic contract, and invoked by the Configurator.
+
+#### Rewards
+
+This is a rewards contract which can hold rewards tokens (e.g. COMP, WETH) and allows claiming rewards by users, according to the core protocol tracking indices.
+
+#### Bulker
+
+This is an external contract that is not integral to Comet’s function. It allows accounts to bulk multiple operations into a single transaction. This is a useful contract for Compound III user interfaces. The following is an example of steps in a bulked transaction.
+
+- Wrap Ether to WETH
+- Supply WETH collateral
+- Supply WBTC collateral
+- Borrow USDC
+
+In addition to supplying, borrowing, and wrapping, the bulker contract can also transfer collateral within the protocol and claim rewards.
+
+## Developer Resources
+
+The following developer guides and code repositories serve as resources for community members building on Compound. They detail the protocol deployment process, construction of new features, and code examples for implementing external apps that depend on Compound III as infrastructure.
+
+1. [Compound III Developer FAQ](https://github.com/compound-developers/compound-3-developer-faq)
+2. [Scenarios, Migrations, and Workflows](https://www.comp.xyz/t/compound-iii-scenarios-migrations-and-workflows/3771)
+3. [Creating a Compound III Liquidator](https://www.comp.xyz/t/the-compound-iii-liquidation-guide/3452)
+4. [Building a Comet Extension](https://www.comp.xyz/t/building-a-comet-extension/3854)
+
+## Security
+
+The security of the Compound protocol is our highest priority; our development team, alongside third-party auditors and consultants, has invested considerable effort to create a protocol that we believe is safe and dependable. All contract code and balances are publicly verifiable, and security researchers are eligible for a bug bounty for reporting undiscovered vulnerabilities.
+
+We believe that size, visibility, and time are the true test for the security of a smart contract; please exercise caution, and make your own determination of security and suitability.
+
+### Audits
+
+The Compound protocol has been reviewed & audited by [OpenZeppelin](https://openzeppelin.com/) and [ChainSecurity](https://chainsecurity.com/).
+
+1. [Compound III Audit by OpenZeppelin](https://blog.openzeppelin.com/compound-iii-audit/)
+2. [Compound III Security Audit by ChainSecurity](https://chainsecurity.com/security-audit/compound-iii/)
+
+## Collateral and Borrowing
+- [Compound III](https://docs.compound.finance/)
+- [Interest Rates](https://docs.compound.finance/interest-rates/)
+- [Collateral & Borrowing](https://docs.compound.finance/collateral-and-borrowing/)
+- [Liquidation](https://docs.compound.finance/liquidation/)
+- [Account Management](https://docs.compound.finance/account-management/)
+- [Protocol Rewards](https://docs.compound.finance/protocol-rewards/)
+- [Governance](https://docs.compound.finance/governance/)
+- [Helper Functions](https://docs.compound.finance/helper-functions/)
+
+# Collateral & Borrowing
+
+Users can add collateral assets to their account using the _[supply](https://docs.compound.finance/collateral-and-borrowing/#supply)_ function. Collateral can only be added if the market is below its _[supplyCap](https://docs.compound.finance/helper-functions/#get-asset-info-by-address)_, which limits the protocol’s risk exposure to collateral assets.
+
+Each collateral asset increases the user’s borrowing capacity, based on the asset’s _[borrowCollateralFactor](https://docs.compound.finance/helper-functions/#get-asset-info-by-address)_. The borrowing collateral factors are percentages that represent the portion of collateral value that can be borrowed.
+
+For instance, if the borrow collateral factor for WBTC is 85%, an account can borrow up to 85% of the USD value of its supplied WBTC in the base asset. Collateral factors can be fetched using the _[Get Asset Info By Address](https://docs.compound.finance/helper-functions/#get-asset-info-by-address)_ function.
+
+The base asset can be borrowed using the _[withdraw](https://docs.compound.finance/collateral-and-borrowing/#withdraw-or-borrow)_ function; the resulting borrow balance must meet the borrowing collateral factor requirements. If a borrowing account subsequently fails to meet the borrow collateral factor requirements, it cannot borrow additional assets until it supplies more collateral, or reduces its borrow balance using the supply function.
+
+Account _balances_ for the base token are signed integers. An account balance greater than zero indicates the base asset is supplied and a balance less than zero indicates the base asset is borrowed. _Note: Base token balances for assets with 18 decimals will start to overflow at a value of 2103/1e18=~10 trillion._
+
+Account balances are stored internally in Comet as _principal_ values (also signed integers). The principal value, also referred to as the day-zero balance, is what an account balance at _T0_ would have to be for it to be equal to the account balance today after accruing interest.
+
+Global _indices_ for supply and borrow are unsigned integers that increase over time to account for the interest accrued on each side. When an account interacts with the protocol, the indices are updated and saved. An account’s present balance can be calculated using the current index with the following formulas.
+
+```hljs solidity
+Balance = Principal * BaseSupplyIndex [Principal > 0]
+Balance = Principal * BaseBorrowIndex [Principal < 0]
+
+```
+
+### Supply
+
+The supply function transfers an asset to the protocol and adds it to the account’s balance. This function can be used to **supply collateral, supply the base asset, or repay an open borrow** of the base asset.
+
+If the base asset is supplied resulting in the account having a balance greater than zero, the base asset earns interest based on the current supply rate. Collateral assets that are supplied do not earn interest.
+
+There are three separate methods to supply an asset to Compound III. The first is on behalf of the caller, the second is to a separate account, and the third is for a manager on behalf of an account.
+
+Before supplying an asset to Compound III, the caller must first execute the asset’s ERC-20 approve of the Comet contract.
+
+#### Comet
+
+```solidity hljs
+function supply(address asset, uint amount)
+
+function supplyTo(address dst, address asset, uint amount)
+
+function supplyFrom(address from, address dst, address asset, uint amount)
+
+```
+
+- `asset`: The address of the asset’s smart contract.
+- `amount`: The amount of the asset to supply to Compound III expressed as an integer. A value of `MaxUint256` will repay all of the `dst`’s base borrow balance.
+- `dst`: The address that is credited with the supplied asset within the protocol.
+- `from`: The address to supply from. This account must first use the Allow method in order to allow the sender to transfer its tokens prior to calling Supply.
+- `RETURN`: No return, reverts on error.
+
+#### Solidity
+
+```solidity hljs
+Comet comet = Comet(0xCometAddress);
+comet.supply(0xERC20Address, 1000000);
+
+```
+
+#### Ethers.js v5.x
+
+```js hljs language-javascript
+const comet = new ethers.Contract(contractAddress, abiJson, provider);
+await comet.supply(usdcAddress, 1000000);
+
+```
+
+### Withdraw or Borrow
+
+The withdraw method is used to **withdraw collateral** that is not currently supporting an open borrow. Withdraw is **also used to borrow the base asset** from the protocol if the account has supplied sufficient collateral. It can also be called from an allowed manager address.
+
+Compound III implements a minimum borrow position size which can be found as `baseBorrowMin` in the [protocol configuration](https://docs.compound.finance/helper-functions/#get-protocol-configuration). A withdraw transaction to borrow that results in the account’s borrow size being less than the `baseBorrowMin` will revert.
+
+#### Comet
+
+```solidity hljs
+function withdraw(address asset, uint amount)
+
+function withdrawTo(address to, address asset, uint amount)
+
+function withdrawFrom(address src, address to, address asset, uint amount)
+
+```
+
+- `asset`: The address of the asset that is being withdrawn or borrowed in the transaction.
+- `amount`: The amount of the asset to withdraw or borrow. A value of `MaxUint256` will withdraw all of the `src`’s base balance.
+- `to`: The address to send the withdrawn or borrowed asset.
+- `src`: The address of the account to withdraw or borrow on behalf of. The `withdrawFrom` method can only be called by an allowed manager.
+- `RETURN`: No return, reverts on error.
+
+#### Solidity
+
+```solidity hljs
+Comet comet = Comet(0xCometAddress);
+comet.withdraw(0xwbtcAddress, 100000000);
+
+```
+
+#### Ethers.js v5.x
+
+```js hljs language-javascript
+const comet = new ethers.Contract(contractAddress, abiJson, provider);
+await comet.withdraw(usdcAddress, 100000000);
+
+```
+
+### Collateral Balance
+
+This function returns the current balance of a collateral asset for a specified account in the protocol.
+
+#### Comet
+
+```solidity hljs
+function collateralBalanceOf(address account, address asset) external view returns (uint128)
+
+```
+
+- `account`: The address of the account in which to retrieve a collateral balance.
+- `asset`: The address of the collateral asset smart contract.
+- `RETURNS`: The balance of the collateral asset in the protocol for the specified account as an unsigned integer scaled up by 10 to the “decimals” integer in the asset’s contract.
+
+#### Solidity
+
+```solidity hljs
+Comet comet = Comet(0xCometAddress);
+uint balance = comet.collateralBalanceOf(0xAccount, 0xUsdcAddress);
+
+```
+
+#### Ethers.js v5.x
+
+```js hljs language-javascript
+const comet = new ethers.Contract(contractAddress, abiJson, provider);
+const balance = await comet.callStatic.collateralBalanceOf('0xAccount', '0xUsdcAddress');
+
+```
+
+### Borrow Collateralization
+
+This function returns true if the account passed to it has non-negative liquidity based on the borrow collateral factors. This function returns false if an account does not have sufficient liquidity to increase its borrow position. A return value of false does not necessarily imply that the account is presently liquidatable (see _[isLiquidatable](https://docs.compound.finance/liquidation/#liquidatable-accounts)_ function).
+
+#### Comet
+
+```solidity hljs
+function isBorrowCollateralized(address account) public view returns (bool)
+
+```
+
+- `account`: The account to examine collateralization.
+- `RETURNS`: Returns true if the account has enough liquidity for borrowing.
+
+#### Solidity
+
+```solidity hljs
+Comet comet = Comet(0xCometAddress);
+bool isCollateralized = comet.isBorrowCollateralized(0xAccount);
+
+```
+
+#### Ethers.js v5.x
+
+```js hljs language-javascript
+const comet = new ethers.Contract(contractAddress, abiJson, provider);
+const isCollateralized = await comet.callStatic.isBorrowCollateralized('0xAccount');
+
+```
+
+### Minimum Borrow Balance
+
+This function returns the minimum borrow balance allowed in the base asset. An account’s initial borrow size must be equal to or greater than this value. Subsequent borrows may be of any size.
+
+#### Comet
+
+```solidity hljs
+function baseBorrowMin() public view returns (uint256)
+
+```
+
+- `RETURNS`: The minimum borrow balance allowed by the protocol as an unsigned integer scaled up by 10 to the “decimals” integer in the base asset’s contract.
+
+#### Solidity
+
+```solidity hljs
+Comet comet = Comet(0xCometAddress);
+uint baseBorrowMin = comet.baseBorrowMin();
+
+```
+
+#### Ethers.js v5.x
+
+```js hljs language-javascript
+const comet = new ethers.Contract(contractAddress, abiJson, provider);
+const baseBorrowMin = await comet.callStatic.baseBorrowMin();
+
+```
+
+## Compound III Governance
+- [Compound III](https://docs.compound.finance/)
+- [Interest Rates](https://docs.compound.finance/interest-rates/)
+- [Collateral & Borrowing](https://docs.compound.finance/collateral-and-borrowing/)
+- [Liquidation](https://docs.compound.finance/liquidation/)
+- [Account Management](https://docs.compound.finance/account-management/)
+- [Protocol Rewards](https://docs.compound.finance/protocol-rewards/)
+- [Governance](https://docs.compound.finance/governance/)
+- [Helper Functions](https://docs.compound.finance/helper-functions/)
+
+# Governance
+
+Compound III is a decentralized protocol that is governed by holders and delegates of COMP. Governance allows the community to propose, vote, and implement changes through the administrative smart contract functions of the Compound III protocol. For more information on the Governor and Timelock see the original [governance](https://docs.compound.finance/v2/governance) section.
+
+All instances of Compound III are controlled by the Timelock contract which is the same administrator of the Compound v2 protocol. The governance system has control over each _proxy_, the _Configurator implementation_, the _Comet factory_, and the _Comet implementation_.
+
+Each time an immutable parameter is set via governance proposal, a new Comet implementation must be deployed by the Comet factory. If the proposal is approved by the community, the proxy will point to the new implementation upon execution.
+
+To set specific protocol parameters in a proposal, the Timelock must call all of the relevant set methods on the _Configurator_ contract, followed by `deployAndUpgradeTo` on the _CometProxyAdmin_ contract.
+
+## Multi-chain Governance
+
+The Compound III protocol can be deployed on any EVM chain. The deployment must have access to on-chain asset prices and governance messages passed from Ethereum Mainnet. The [Timelock](https://docs.compound.finance/v2/governance/#timelock) on Mainnet is the administrator of all community sanctioned instances of Compound III.
+
+Each deployment outside of Mainnet needs to have a [Bridge Receiver](https://github.com/compound-finance/comet/blob/main/contracts/bridges/BaseBridgeReceiver.sol) and Local Timelock contract on its chain. Governance proposals executed on Mainnet must be read by the chain’s bridge and published to the Bridge Receiver. Local Timelocks have an additional delay before Comet admin functions can be called via proposal execution.
+
+Compound III instance initializations are logged on-chain using the [ENS text record system](https://docs.ens.domains/ens-improvement-proposals/ensip-5-text-records). The text record can only be modified by a Governance proposal. It can be viewed at [v3-additional-grants.compound-community-licenses.eth](https://app.ens.domains/name/v3-additional-grants.compound-community-licenses.eth/details) when the browser network is set to Ethereum Mainnet.
+
+### Set Comet Factory
+
+This function sets the official contract address of the Comet factory. The only acceptable caller is the Governor.
+
+#### Configurator
+
+```solidity hljs
+function setFactory(address cometProxy, address newFactory) external
+
+```
+
+- `cometProxy`: The address of the Comet proxy to set the configuration for.
+- `newFactory`: The address of the new Comet contract factory.
+- `RETURN`: No return, reverts on error.
+
+### Set Governor
+
+This function sets the official contract address of the Compound III protocol Governor for subsequent proposals.
+
+#### Configurator
+
+```solidity hljs
+function setGovernor(address cometProxy, address newGovernor) external
+
+```
+
+- `cometProxy`: The address of the Comet proxy to set the configuration for.
+- `newGovernor`: The address of the new Compound III Governor.
+- `RETURN`: No return, reverts on error.
+
+### Set Pause Guardian
+
+This function sets the official contract address of the Compound III protocol pause guardian. This address has the power to pause supply, transfer, withdraw, absorb, and buy collateral operations within Compound III.
+
+COMP token-holders designate the Pause Guardian address, which is held by the [Community Multi-Sig](https://etherscan.io/address/0xbbf3f1421d886e9b2c5d716b5192ac998af2012c).
+
+#### Configurator
+
+```solidity hljs
+function setPauseGuardian(address cometProxy, address newPauseGuardian) external
+
+```
+
+- `cometProxy`: The address of the Comet proxy to set the configuration for.
+- `newPauseGuardian`: The address of the new pause guardian.
+- `RETURN`: No return, reverts on error.
+
+### Pause Protocol Functionality
+
+This function pauses the specified protocol functionality in the event of an unforeseen vulnerability. The only addresses that are allowed to call this function are the Governor and the Pause Guardian.
+
+#### Comet
+
+```solidity hljs
+function pause(
+    bool supplyPaused,
+    bool transferPaused,
+    bool withdrawPaused,
+    bool absorbPaused,
+    bool buyPaused
+) override external
+
+```
+
+- `supplyPaused`: Enables or disables all accounts’ ability to supply assets to the protocol.
+- `transferPaused`: Enables or disables all account’s ability to transfer assets within the protocol.
+- `withdrawPaused`: Enables or disables all account’s ability to withdraw assets from the protocol.
+- `absorbPaused`: Enables or disables protocol absorptions.
+- `buyPaused`: Enables or disables the protocol’s ability to sell absorbed collateral.
+- `RETURN`: No return, reverts on error.
+
+### Is Supply Paused
+
+This function returns a boolean indicating whether or not the protocol supply functionality is presently paused.
+
+#### Comet
+
+```solidity hljs
+function isSupplyPaused() override public view returns (bool)
+
+```
+
+- `RETURN`: A boolean value of whether or not the protocol functionality is presently paused.
+
+### Is Transfer Paused
+
+This function returns a boolean indicating whether or not the protocol transfer functionality is presently paused.
+
+#### Comet
+
+```solidity hljs
+function isTransferPaused() override public view returns (bool)
+
+```
+
+- `RETURN`: A boolean value of whether or not the protocol functionality is presently paused.
+
+### Is Withdraw Paused
+
+This function returns a boolean indicating whether or not the protocol withdraw functionality is presently paused.
+
+#### Comet
+
+```solidity hljs
+function isWithdrawPaused() override public view returns (bool)
+
+```
+
+- `RETURN`: A boolean value of whether or not the protocol functionality is presently paused.
+
+### Is Absorb Paused
+
+This function returns a boolean indicating whether or not the protocol absorb functionality is presently paused.
+
+#### Comet
+
+```solidity hljs
+function isAbsorbPaused() override public view returns (bool)
+
+```
+
+- `RETURN`: A boolean value of whether or not the protocol functionality is presently paused.
+
+### Is Buy Paused
+
+This function returns a boolean indicating whether or not the protocol’s selling of absorbed collateral functionality is presently paused.
+
+#### Comet
+
+```solidity hljs
+function isBuyPaused() override public view returns (bool)
+
+```
+
+- `RETURN`: A boolean value of whether or not the protocol functionality is presently paused.
+
+### Set Base Token Price Feed
+
+This function sets the official contract address of the price feed of the protocol base asset.
+
+#### Configurator
+
+```solidity hljs
+function setBaseTokenPriceFeed(address cometProxy, address newBaseTokenPriceFeed) external
+
+```
+
+- `cometProxy`: The address of the Comet proxy to set the configuration for.
+- `newBaseTokenPriceFeed`: The address of the new price feed contract.
+- `RETURN`: No return, reverts on error.
+
+### Set Extension Delegate
+
+This function sets the official contract address of the protocol’s Comet extension delegate. The methods in **CometExt.sol** are able to be called via the same proxy as **Comet.sol**.
+
+#### Configurator
+
+```solidity hljs
+function setExtensionDelegate(address cometProxy, address newExtensionDelegate) external
+
+```
+
+- `cometProxy`: The address of the Comet proxy to set the configuration for.
+- `newExtensionDelegate`: The address of the new extension delegate contract.
+- `RETURN`: No return, reverts on error.
+
+### Set Borrow Kink
+
+This function sets the borrow interest rate utilization curve kink for the Compound III base asset.
+
+#### Configurator
+
+```solidity hljs
+function setBorrowKink(address cometProxy, uint64 newKink) external
+
+```
+
+- `cometProxy`: The address of the Comet proxy to set the configuration for.
+- `newKink`: The new kink parameter.
+- `RETURN`: No return, reverts on error.
+
+### Set Borrow Interest Rate Slope (Low)
+
+This function sets the borrow interest rate slope low bound in the approximate amount of seconds in one year.
+
+#### Configurator
+
+```solidity hljs
+function setBorrowPerYearInterestRateSlopeLow(address cometProxy, uint64 newSlope) external
+
+```
+
+- `cometProxy`: The address of the Comet proxy to set the configuration for.
+- `newSlope`: The slope low bound as an unsigned integer.
+- `RETURN`: No return, reverts on error.
+
+### Set Borrow Interest Rate Slope (High)
+
+This function sets the borrow interest rate slope high bound in the approximate amount of seconds in one year.
+
+#### Configurator
+
+```solidity hljs
+function setBorrowPerYearInterestRateSlopeHigh(address cometProxy, uint64 newSlope) external
+
+```
+
+- `cometProxy`: The address of the Comet proxy to set the configuration for.
+- `newSlope`: The slope high bound as an unsigned integer.
+- `RETURN`: No return, reverts on error.
+
+### Set Borrow Interest Rate Slope (Base)
+
+This function sets the borrow interest rate slope base in the approximate amount of seconds in one year.
+
+#### Configurator
+
+```solidity hljs
+function setBorrowPerYearInterestRateBase(address cometProxy, uint64 newBase) external
+
+```
+
+- `cometProxy`: The address of the Comet proxy to set the configuration for.
+- `newSlope`: The slope base as an unsigned integer.
+- `RETURN`: No return, reverts on error.
+
+### Set Supply Kink
+
+This function sets the supply interest rate utilization curve kink for the Compound III base asset.
+
+#### Configurator
+
+```solidity hljs
+function setSupplyKink(address cometProxy, uint64 newKink) external
+
+```
+
+- `cometProxy`: The address of the Comet proxy to set the configuration for.
+- `newKink`: The new kink parameter.
+- `RETURN`: No return, reverts on error.
+
+### Set Supply Interest Rate Slope (Low)
+
+This function sets the supply interest rate slope low bound in the approximate amount of seconds in one year.
+
+#### Configurator
+
+```solidity hljs
+function setSupplyPerYearInterestRateSlopeLow(address cometProxy, uint64 newSlope) external
+
+```
+
+- `cometProxy`: The address of the Comet proxy to set the configuration for.
+- `newSlope`: The slope low bound as an unsigned integer.
+- `RETURN`: No return, reverts on error.
+
+### Set Supply Interest Rate Slope (High)
+
+This function sets the supply interest rate slope high bound in the approximate amount of seconds in one year.
+
+#### Configurator
+
+```solidity hljs
+function setSupplyPerYearInterestRateSlopeHigh(address cometProxy, uint64 newSlope) external
+
+```
+
+- `cometProxy`: The address of the Comet proxy to set the configuration for.
+- `newSlope`: The slope high bound as an unsigned integer.
+- `RETURN`: No return, reverts on error.
+
+### Set Supply Interest Rate Slope (Base)
+
+This function sets the supply interest rate slope base in the approximate amount of seconds in one year.
+
+#### Configurator
+
+```solidity hljs
+function setSupplyPerYearInterestRateBase(address cometProxy, uint64 newBase) external
+
+```
+
+- `cometProxy`: The address of the Comet proxy to set the configuration for.
+- `newSlope`: The slope base as an unsigned integer.
+- `RETURN`: No return, reverts on error.
+
+### Set Store Front Price Factor
+
+This function sets the fraction of the liquidation penalty that goes to buyers of collateral instead of the protocol. This factor is used to calculate the discount rate of collateral for sale as part of the account absorption process. The rate is a decimal scaled up by `10 ^ 18`.
+
+#### Configurator
+
+```solidity hljs
+function setStoreFrontPriceFactor(address cometProxy, uint64 newStoreFrontPriceFactor) external
+
+```
+
+- `cometProxy`: The address of the Comet proxy to set the configuration for.
+- `newStoreFrontPriceFactor`: The new price factor as an unsigned integer expressed as a decimal scaled up by `10 ^ 18`.
+- `RETURN`: No return, reverts on error.
+
+### Set Base Tracking Supply Speed
+
+This function sets the rate at which base asset supplier accounts accrue rewards.
+
+#### Configurator
+
+```solidity hljs
+function setBaseTrackingSupplySpeed(address cometProxy, uint64 newBaseTrackingSupplySpeed) external
+
+```
+
+- `cometProxy`: The address of the Comet proxy to set the configuration for.
+- `newBaseTrackingSupplySpeed`: The rate as an APR expressed as a decimal scaled up by `10 ^ 18`.
+- `RETURN`: No return, reverts on error.
+
+### Set Base Tracking Borrow Speed
+
+This function sets the rate at which base asset borrower accounts accrue rewards.
+
+#### Configurator
+
+```solidity hljs
+function setBaseTrackingBorrowSpeed(address cometProxy, uint64 newBaseTrackingBorrowSpeed) external
+
+```
+
+- `cometProxy`: The address of the Comet proxy to set the configuration for.
+- `newBaseTrackingBorrowSpeed`: The rate as an APR expressed as a decimal scaled up by `10 ^ 18`.
+- `RETURN`: No return, reverts on error.
+
+### Set Base Minimum For Rewards
+
+This function sets the minimum amount of base asset supplied to the protocol in order for accounts to accrue rewards.
+
+#### Configurator
+
+```solidity hljs
+function setBaseMinForRewards(address cometProxy, uint104 newBaseMinForRewards) external
+
+```
+
+- `cometProxy`: The address of the Comet proxy to set the configuration for.
+- `newBaseMinForRewards`: The amount of base asset scaled up by 10 to the “decimals” integer in the base asset’s contract.
+- `RETURN`: No return, reverts on error.
+
+### Set Borrow Minimum
+
+This function sets the minimum amount of base token that is allowed to be borrowed.
+
+#### Configurator
+
+```solidity hljs
+function setBaseBorrowMin(address cometProxy, uint104 newBaseBorrowMin) external
+
+```
+
+- `cometProxy`: The address of the Comet proxy to set the configuration for.
+- `setBaseBorrowMin`: The minimum borrow as an unsigned integer scaled up by 10 to the “decimals” integer in the base asset’s contract.
+- `RETURN`: No return, reverts on error.
+
+### Set Target Reserves
+
+This function sets the target reserves amount. Once the protocol reaches this amount of reserves of base asset, liquidators cannot buy collateral from the protocol.
+
+#### Configurator
+
+```solidity hljs
+function setTargetReserves(address cometProxy, uint104 newTargetReserves) external
+
+```
+
+- `cometProxy`: The address of the Comet proxy to set the configuration for.
+- `newTargetReserves`: The amount of reserves of base asset as an unsigned integer scaled up by 10 to the “decimals” integer in the base asset’s contract.
+- `RETURN`: No return, reverts on error.
+
+### Add a New Asset
+
+This function adds an asset to the protocol through governance.
+
+#### Configurator
+
+```solidity hljs
+function addAsset(address cometProxy, AssetConfig calldata assetConfig) external
+
+```
+
+- `cometProxy`: The address of the Comet proxy to set the configuration for.
+- `assetConfig`: The configuration that is added to the array of protocol asset configurations.
+- `RETURN`: No return, reverts on error.
+
+### Update an Existing Asset
+
+This function modifies an existing asset’s configuration parameters.
+
+#### Configurator
+
+```solidity hljs
+function updateAsset(address cometProxy, AssetConfig calldata newAssetConfig) external
+
+```
+
+- `cometProxy`: The address of the Comet proxy to set the configuration for.
+- `newAssetConfig`: The configuration that is modified in the array of protocol asset configurations. All parameters are overwritten.
+- `RETURN`: No return, reverts on error.
+
+### Update Asset Price Feed
+
+This function updates the price feed contract address for a specific asset.
+
+#### Configurator
+
+```solidity hljs
+function updateAssetPriceFeed(address cometProxy, address asset, address newPriceFeed) external
+
+```
+
+- `cometProxy`: The address of the Comet proxy to set the configuration for.
+- `asset`: The address of the underlying asset smart contract.
+- `newPriceFeed`: The address of the new price feed smart contract.
+- `RETURN`: No return, reverts on error.
+
+### Update Borrow Collateral Factor
+
+This function updates the borrow collateral factor for an asset in the protocol.
+
+#### Configurator
+
+```solidity hljs
+function updateAssetBorrowCollateralFactor(address cometProxy, address asset, uint64 newBorrowCF) external
+
+```
+
+- `cometProxy`: The address of the Comet proxy to set the configuration for.
+- `asset`: The address of the underlying asset smart contract.
+- `newBorrowCF`: The collateral factor as an integer that represents the decimal value scaled up by `10 ^ 18`.
+- `RETURN`: No return, reverts on error.
+
+### Update Liquidation Collateral Factor
+
+This function updates the liquidation collateral factor for an asset in the protocol.
+
+#### Configurator
+
+```solidity hljs
+function updateAssetLiquidateCollateralFactor(address cometProxy, address asset, uint64 newLiquidateCF) external
+
+```
+
+- `cometProxy`: The address of the Comet proxy to set the configuration for.
+- `asset`: The address of the underlying asset smart contract.
+- `newLiquidateCF`: The collateral factor as an integer that represents the decimal value scaled up by `10 ^ 18`.
+- `RETURN`: No return, reverts on error.
+
+### Update Liquidation Factor
+
+This function updates the liquidation factor for an asset in the protocol.
+
+The liquidation factor is a decimal value that is between 0 and 1 (inclusive) which determines the amount that is paid out to an underwater account upon liquidation.
+
+The following is an example of the liquidation factor’s role in a Compound III liquidation:
+
+An underwater account has supplied $100 of WBTC as collateral. If the WBTC liquidation factor is `0.9`, the user will receive $90 of the base asset when a liquidator triggers an absorption of their account.
+
+#### Configurator
+
+```solidity hljs
+function updateAssetLiquidationFactor(address cometProxy, address asset, uint64 newLiquidationFactor) external
+
+```
+
+- `cometProxy`: The address of the Comet proxy to set the configuration for.
+- `asset`: The address of the underlying asset smart contract.
+- `newLiquidationFactor`: The factor as an integer that represents the decimal value scaled up by `10 ^ 18`.
+- `RETURN`: No return, reverts on error.
+
+### Set Asset Supply Cap
+
+This function sets the maximum amount of an asset that can be supplied to the protocol. Supply transactions will revert if the total supply would be greater than this number as a result.
+
+#### Configurator
+
+```solidity hljs
+function updateAssetSupplyCap(address cometProxy, address asset, uint128 newSupplyCap) external
+
+```
+
+- `cometProxy`: The address of the Comet proxy to set the configuration for.
+- `asset`: The address of the underlying asset smart contract.
+- `newSupplyCap`: The amount of the asset as an unsigned integer scaled up by 10 to the “decimals” integer in the asset’s contract.
+- `RETURN`: No return, reverts on error.
+
+### ERC-20 Approve Manager Address
+
+This function sets the Comet contract’s ERC-20 allowance of an asset for a manager address. It can only be called by the Governor.
+
+In the event of a governance attack, an attacker could create a proposal that leverages this function to give themselves permissions to freely transfer all ERC-20 tokens out of the Comet contract.
+
+Hypothetically, the attacker would need to either acquire supreme voting weight or add a malicious step in an otherwise innocuous and popular proposal and the community would fail to detect before approving.
+
+#### Comet
+
+```solidity hljs
+function approveThis(address manager, address asset, uint amount) override external
+
+```
+
+- `manager`: The address of a manager account that has its allowance modified.
+- `asset`: The address of the asset’s smart contract.
+- `amount`: The amount of the asset approved for the manager expressed as an integer.
+- `RETURN`: No return, reverts on error.
+
+### Transfer Governor
+
+This function changes the address of the Configurator’s Governor.
+
+#### Configurator
+
+```solidity hljs
+function transferGovernor(address newGovernor) external
+
+```
+
+- `newGovernor`: The address of the new Governor for Configurator.
+- `RETURN`: No return, reverts on error.
+
+### Withdraw Reserves
+
+This function allows governance to withdraw base token reserves from the protocol and send them to a specified address. Only the Governor address may call this function.
+
+#### Comet
+
+```solidity hljs
+function withdrawReserves(address to, uint amount) external
+
+```
+
+- `to`: The address of the recipient of the base asset tokens.
+- `amount`: The amount of the base asset to send scaled up by 10 to the “decimals” integer in the base asset’s contract.
+- `RETURN`: No return, reverts on error.
+
+## Compound Helper Functions
+- [Compound III](https://docs.compound.finance/)
+- [Interest Rates](https://docs.compound.finance/interest-rates/)
+- [Collateral & Borrowing](https://docs.compound.finance/collateral-and-borrowing/)
+- [Liquidation](https://docs.compound.finance/liquidation/)
+- [Account Management](https://docs.compound.finance/account-management/)
+- [Protocol Rewards](https://docs.compound.finance/protocol-rewards/)
+- [Governance](https://docs.compound.finance/governance/)
+- [Helper Functions](https://docs.compound.finance/helper-functions/)
+
+# Helper Functions
+
+### Total Supply
+
+The total supply of base tokens supplied to the protocol plus interest accrued to suppliers.
+
+#### Comet
+
+```solidity hljs
+function totalSupply() override external view returns (uint256)
+
+```
+
+- `RETURN`: The amount of base asset scaled up by 10 to the “decimals” integer in the base asset’s contract.
+
+#### Solidity
+
+```solidity hljs
+Comet comet = Comet(0xCometAddress);
+uint256 totalSupply = comet.totalSupply();
+
+```
+
+#### Ethers.js v5.x
+
+```js hljs language-javascript
+const comet = new ethers.Contract(contractAddress, abiJson, provider);
+const totalSupply = await comet.callStatic.totalSupply();
+
+```
+
+### Total Borrow
+
+The total amount of base tokens that are currently borrowed from the protocol plus interest accrued to all borrows.
+
+#### Comet
+
+```solidity hljs
+function totalBorrow() virtual external view returns (uint256)
+
+```
+
+- `RETURN`: The amount of base asset scaled up by 10 to the “decimals” integer in the base asset’s contract.
+
+#### Solidity
+
+```solidity hljs
+Comet comet = Comet(0xCometAddress);
+uint256 totalBorrow = comet.totalBorrow();
+
+```
+
+#### Ethers.js v5.x
+
+```js hljs language-javascript
+const comet = new ethers.Contract(contractAddress, abiJson, provider);
+const totalBorrow = await comet.callStatic.totalBorrow();
+
+```
+
+### Total Collateral
+
+The protocol tracks the current amount of collateral that all accounts have supplied. Each valid collateral asset sum is tracked in a mapping with the asset address that points to a struct.
+
+#### Comet
+
+```solidity hljs
+struct TotalsCollateral {
+    uint128 totalSupplyAsset;
+    uint128 _reserved;
+}
+
+mapping(address => TotalsCollateral) public totalsCollateral;
+
+```
+
+- `address`: The address of the collateral asset’s contract.
+- `RETURN`: A struct containing the stored data pertaining to the sum of the collateral in the protocol.
+- `totalSupplyAsset`: A Solidity `uint128` of the sum of the collateral asset stored in the protocol, scaled up by 10 to the “decimals” integer in the asset’s contract.
+
+#### Solidity
+
+```solidity hljs
+Comet comet = Comet(0xCometAddress);
+TotalsCollateral totalsCollateral = comet.totalsCollateral(0xERC20Address);
+
+```
+
+#### Ethers.js v5.x
+
+```js hljs language-javascript
+const comet = new ethers.Contract(contractAddress, abiJson, provider);
+const [ totalSupplyAsset ] = await comet.callStatic.totalsCollateral('0xERC20Address');
+
+```
+
+### Supplied Base Balance
+
+This function returns the current balance of base asset for a specified account in the protocol, including interest. If the account is presently borrowing or not supplying, it will return `0`.
+
+#### Comet
+
+```solidity hljs
+function balanceOf(address account) external view returns (uint256)
+
+```
+
+- `account`: The address of the account in which to retrieve the base asset balance.
+- `RETURNS`: The balance of the base asset, including interest, in the protocol for the specified account as an unsigned integer scaled up by 10 to the “decimals” integer in the asset’s contract.
+
+#### Solidity
+
+```solidity hljs
+Comet comet = Comet(0xCometAddress);
+uint balance = comet.balanceOf(0xAccount);
+
+```
+
+#### Ethers.js v5.x
+
+```js hljs language-javascript
+const comet = new ethers.Contract(contractAddress, abiJson, provider);
+const balance = await comet.callStatic.balanceOf('0xAccount');
+
+```
+
+### Borrow Balance
+
+This function returns the current balance of borrowed base asset for a specified account in the protocol, including interest. If the account has a non-negative base asset balance, it will return `0`.
+
+#### Comet
+
+```solidity hljs
+function borrowBalanceOf(address account) external view returns (uint256)
+
+```
+
+- `account`: The address of the account in which to retrieve the borrowed base asset balance.
+- `RETURNS`: The balance of the base asset, including interest, borrowed by the specified account as an unsigned integer scaled up by 10 to the “decimals” integer in the asset’s contract.
+
+#### Solidity
+
+```solidity hljs
+Comet comet = Comet(0xCometAddress);
+uint owed = comet.borrowBalanceOf(0xAccount);
+
+```
+
+#### Ethers.js v5.x
+
+```js hljs language-javascript
+const comet = new ethers.Contract(contractAddress, abiJson, provider);
+const owed = await comet.callStatic.borrowBalanceOf('0xAccount');
+
+```
+
+### Account Data
+
+The protocol tracks data like the principal and indexes for each account that supplies and borrows. The data is stored in a mapping with the account address that points to a struct.
+
+#### Comet
+
+```solidity hljs
+struct UserBasic {
+    int104 principal;
+    uint64 baseTrackingIndex;
+    uint64 baseTrackingAccrued;
+    uint16 assetsIn;
+}
+
+mapping(address => UserBasic) public userBasic;
+
+```
+
+- `address`: The address of the account that has used the protocol.
+- `RETURN`: A struct containing the stored data pertaining to the account.
+- `principal`: A Solidity `int104` of the amount of base asset that the account has supplied (greater than zero) or owes (less than zero) to the protocol.
+- `baseTrackingIndex`: A Solidity `uint64` of the index of the account.
+- `baseTrackingAccrued`: A Solidity `uint64` of the interest that the account has accrued.
+- `assetsIn`: A Solidity `uint16` that tracks which assets the account has supplied as collateral. This storage implementation is for internal purposes and enables gas savings.
+
+#### Solidity
+
+```solidity hljs
+Comet comet = Comet(0xCometAddress);
+UserBasic userBasic = comet.userBasic(0xAccount);
+
+```
+
+#### Ethers.js v5.x
+
+```js hljs language-javascript
+const comet = new ethers.Contract(contractAddress, abiJson, provider);
+const [ principal, baseTrackingIndex, baseTrackingAccrued, assetsIn ] = await comet.callStatic.userBasic('0xAccount');
+
+```
+
+### Get Asset Info
+
+This function returns collateral asset information such as the collateral factors, asset price feed address, and more. In order to create a loop to fetch information for every asset, use the `numAssets` constant, which indicates the current total number of supported collateral assets.
+
+#### Comet
+
+```solidity hljs
+struct AssetInfo {
+    uint8 offset;
+    address asset;
+    address priceFeed;
+    uint64 scale;
+    uint64 borrowCollateralFactor;
+    uint64 liquidateCollateralFactor;
+    uint64 liquidationFactor;
+    uint128 supplyCap;
+}
+
+function getAssetInfo(uint8 i) public view returns (AssetInfo memory)
+
+```
+
+- `i`: The index of the collateral asset based on the order it was added to the protocol. The index begins at `0`.
+- `RETURNS`: The collateral asset information as a struct called `AssetInfo`.
+- `offset`: The index of the collateral asset based on the order it was added to the protocol.
+- `asset`: The address of the asset’s smart contract.
+- `priceFeed`: The address of the price feed contract for this collateral asset.
+- `scale`: An integer that equals `10 ^ x` where `x` is the amount of decimal places in the collateral asset’s smart contract.
+- `borrowCollateralFactor`: The borrow collateral factor is the percentage of collateral value that can be borrowed (including interest) by an account. The return value is an integer that represents the decimal value scaled up by `10 ^ 18`. E.g. 650000000000000000 is 65%.
+- `liquidateCollateralFactor`: The liquidate collateral factor is the percentage of collateral value that can be borrowed (including interest) before an account becomes liquidatable. The return value is an integer that represents the decimal value scaled up by `10 ^ 18`. E.g. 850000000000000000 is 85%.
+- `liquidationFactor`: The liquidation factor as an integer that represents the decimal value scaled up by `10 ^ 18`. E.g. 930000000000000000 means liquidation carries a 7% penalty for the account.
+- `supplyCap`: The supply cap of the collateral asset as an integer scaled up by `10 ^ x` where `x` is the amount of decimal places in the asset’s smart contract.
+
+#### Solidity
+
+```solidity hljs
+Comet comet = Comet(0xCometAddress);
+AssetInfo info = comet.getAssetInfo(0);
+
+```
+
+#### Ethers.js v5.x
+
+```js hljs language-javascript
+const comet = new ethers.Contract(contractAddress, abiJson, provider);
+const infoObject = await comet.callStatic.getAssetInfo(0);
+
+```
+
+### Get Asset Info By Address
+
+This function returns information of a specific collateral asset.
+
+#### Comet
+
+```solidity hljs
+struct AssetInfo {
+    uint8 offset;
+    address asset;
+    address priceFeed;
+    uint64 scale;
+    uint64 borrowCollateralFactor;
+    uint64 liquidateCollateralFactor;
+    uint64 liquidationFactor;
+    uint128 supplyCap;
+}
+
+function getAssetInfoByAddress(address asset) public view returns (AssetInfo memory)
+
+```
+
+- `address`: The address of the collateral asset.
+- `RETURNS`: The collateral asset information as a struct called `AssetInfo`.
+- `offset`: The index of the collateral asset based on the order it was added to the protocol.
+- `asset`: The address of the collateral asset’s smart contract.
+- `priceFeed`: The address of the price feed contract for this collateral asset.
+- `scale`: An integer that equals `10 ^ x` where `x` is the amount of decimal places in the collateral asset’s smart contract.
+- `borrowCollateralFactor`: The borrow collateral factor is the percentage of collateral value that can be borrowed (including interest) by an account. The return value is an integer that represents the decimal value scaled up by `10 ^ 18`. E.g. 650000000000000000 is 65%.
+- `liquidateCollateralFactor`: The liquidate collateral factor is the percentage of collateral value that can be borrowed (including interest) before an account becomes liquidatable. The return value is an integer that represents the decimal value scaled up by `10 ^ 18`. E.g. 850000000000000000 is 85%.
+- `liquidationFactor`: The liquidation factor as an integer that represents the decimal value scaled up by `10 ^ 18`. E.g. 930000000000000000 means liquidation carries a 7% penalty for the account.
+- `supplyCap`: The supply cap of the collateral asset as an integer scaled up by `10 ^ x` where `x` is the amount of decimal places in the asset’s smart contract.
+
+#### Solidity
+
+```solidity hljs
+Comet comet = Comet(0xCometAddress);
+AssetInfo info = comet.getAssetInfoByAddress(0xAsset);
+
+```
+
+#### Ethers.js v5.x
+
+```js hljs language-javascript
+const comet = new ethers.Contract(contractAddress, abiJson, provider);
+const infoObject = await comet.callStatic.getAssetInfoByAddress('0xAsset');
+
+```
+
+### Get Price
+
+The protocol’s prices are updated by [Chainlink Price Feeds](https://data.chain.link/). In order to fetch the present price of an asset, the price feed contract address for that asset must be passed to the `getPrice` function.
+
+This function returns the price of an asset in USD with 8 decimal places.
+
+#### Comet
+
+```solidity hljs
+function getPrice(address priceFeed) public view returns (uint128)
+
+```
+
+- `priceFeed`: The ERC-20 address of the Chainlink price feed contract for the asset.
+- `RETURNS`: Returns the USD price with 8 decimal places as an unsigned integer scaled up by `10 ^ 8`. E.g. `500000000000` means that the asset’s price is $5000 USD.
+
+#### Solidity
+
+```solidity hljs
+Comet comet = Comet(0xCometAddress);
+uint price = comet.getPrice(0xAssetAddress);
+
+```
+
+#### Ethers.js v5.x
+
+```js hljs language-javascript
+const comet = new ethers.Contract(contractAddress, abiJson, provider);
+const price = await comet.callStatic.getPrice(usdcAddress);
+
+```
+
+### Accrue Account
+
+This function triggers a manual accrual of interest and rewards to an account.
+
+#### Comet
+
+```solidity hljs
+function accrueAccount(address account) override external
+
+```
+
+- `account`: The account in which to accrue interest and rewards.
+- `RETURN`: No return, reverts on error.
+
+#### Solidity
+
+```solidity hljs
+Comet comet = Comet(0xCometAddress);
+uint price = comet.accrueAccount(0xAccount);
+
+```
+
+#### Ethers.js v5.x
+
+```js hljs language-javascript
+const comet = new ethers.Contract(contractAddress, abiJson, provider);
+await comet.accrueAccount('0xAccount');
+
+```
+
+### Get Protocol Configuration
+
+This function returns the configuration struct stored for a specific instance of Comet in the configurator contract.
+
+#### Configurator
+
+```solidity hljs
+struct Configuration {
+    address governor;
+    address pauseGuardian;
+    address baseToken;
+    address baseTokenPriceFeed;
+    address extensionDelegate;
+
+    uint64 supplyKink;
+    uint64 supplyPerYearInterestRateSlopeLow;
+    uint64 supplyPerYearInterestRateSlopeHigh;
+    uint64 supplyPerYearInterestRateBase;
+    uint64 borrowKink;
+    uint64 borrowPerYearInterestRateSlopeLow;
+    uint64 borrowPerYearInterestRateSlopeHigh;
+    uint64 borrowPerYearInterestRateBase;
+    uint64 storeFrontPriceFactor;
+    uint64 trackingIndexScale;
+    uint64 baseTrackingSupplySpeed;
+    uint64 baseTrackingBorrowSpeed;
+    uint104 baseMinForRewards;
+    uint104 baseBorrowMin;
+    uint104 targetReserves;
+
+    AssetConfig[] assetConfigs;
+}
+
+function getConfiguration(address cometProxy) external view returns (Configuration memory)
+
+```
+
+- `cometProxy`: The address of the Comet proxy to get the configuration for.
+- `RETURNS`: Returns the protocol configuration.
+  - `governor`: The address of the protocol Governor.
+  - `pauseGuardian`: The address of the protocol pause guardian.
+  - `baseToken`: The address of the protocol base token smart contract.
+  - `baseTokenPriceFeed`: The address of the protocol base token price feed smart contract.
+  - `extensionDelegate`: The address of the delegate of extra methods that did not fit in Comet.sol (CometExt.sol).
+  - `supplyKink`: The interest rate utilization of the supply side of curve kink.
+  - `supplyPerYearInterestRateSlopeLow`: The low bound interest rate slope of the supply side.
+  - `supplyPerYearInterestRateSlopeHigh`: The high bound interest rate slope of the supply side.
+  - `supplyPerYearInterestRateBase`: The interest rate slope base of the supply side.
+  - `borrowKink`: The interest rate utilization of the borrow side of curve kink.
+  - `borrowPerYearInterestRateSlopeLow`: The low bound interest rate slope of the borrow side.
+  - `borrowPerYearInterestRateSlopeHigh`: The high bound interest rate slope of the borrow side.
+  - `borrowPerYearInterestRateBase`: The interest rate slope base of the borrow side.
+  - `storeFrontPriceFactor`: The fraction of the liquidation penalty that goes to buyers of collateral instead of the protocol.
+  - `trackingIndexScale`: The scale for the index tracking protocol rewards.
+  - `baseTrackingSupplySpeed`: The rate for protocol awards accrued to suppliers.
+  - `baseTrackingBorrowSpeed`: The rate for protocol awards accrued to borrowers.
+  - `baseMinForRewards`: The minimum amount of base asset supplied to the protocol in order for accounts to accrue rewards.
+  - `baseBorrowMin`: The minimum allowed borrow size.
+  - `targetReserves`: The amount of reserves allowed before absorbed collateral is no longer sold by the protocol.
+  - `assetConfigs`: An array of all supported asset configurations.
+
+#### Solidity
+
+```solidity hljs
+Configurator configurator = Configurator(0xConfiguratorAddress);
+Configuration config = configurator.getConfiguration(0xCometProxy);
+
+```
+
+#### Ethers.js v5.x
+
+```js hljs language-javascript
+const configurator = new ethers.Contract(contractAddress, abiJson, provider);
+const config = await configurator.callStatic.getConfiguration('0xCometProxy');
+
+```
+
+### Get Comet Factory
+
+This function gets the address of the Comet Factory contract.
+
+#### Configurator
+
+```solidity hljs
+function factory(address cometProxy) public view returns (address cometFactory)
+
+```
+
+- `cometProxy`: The address of the Comet proxy contract.
+- `RETURNS`: The address of the Comet Factory for the specified instance of Comet.
+
+#### Solidity
+
+```solidity hljs
+Configurator configurator = Configurator(0xConfiguratorAddress);
+CometFactory factory = configurator.factory(0xCometProxy);
+
+```
+
+#### Ethers.js v5.x
+
+```js hljs language-javascript
+const configurator = new ethers.Contract(contractAddress, abiJson, provider);
+const factoryAddress = await configurator.factory.getConfiguration('0xCometProxy');
+
+```
+
+### Get Base Asset Market Information
+
+This function gets several of the current parameter values for the protocol market.
+
+#### Comet
+
+```solidity hljs
+struct TotalsBasic {
+    uint64 baseSupplyIndex;
+    uint64 baseBorrowIndex;
+    uint64 trackingSupplyIndex;
+    uint64 trackingBorrowIndex;
+    uint104 totalSupplyBase;
+    uint104 totalBorrowBase;
+    uint40 lastAccrualTime;
+    uint8 pauseFlags;
+}
+
+function totalsBasic() public override view returns (TotalsBasic memory)
+
+```
+
+- `RETURNS`: The base asset market information as a struct called `TotalsBasic` (defined in CometStorage.sol).
+- `baseSupplyIndex`: The global base asset supply index for calculating interest accrued to suppliers.
+- `baseBorrowIndex`: The global base asset borrow index for calculating interest owed by borrowers.
+- `trackingSupplyIndex`: A global index for tracking participation of accounts that supply the base asset.
+- `trackingBorrowIndex`: A global index for tracking participation of accounts that borrow the base asset.
+- `totalSupplyBase`: The total amount of base asset presently supplied to the protocol as an unsigned integer scaled up by 10 to the “decimals” integer in the base asset’s contract.
+- `totalBorrowBase`: The total amount of base asset presently borrowed from the protocol as an unsigned integer scaled up by 10 to the “decimals” integer in the base asset’s contract.
+- `lastAccrualTime`: The most recent time that protocol interest accrual was globally calculated. A block timestamp as seconds since the Unix epoch.
+- `pauseFlags`: An integer that represents paused protocol functionality flags that are packed for data storage efficiency. See [Pause Protocol Functionality](https://docs.compound.finance/governance/#pause-protocol-functionality).
+
+#### Solidity
+
+```solidity hljs
+Comet comet = Comet(0xCometAddress);
+TotalsBasic tb = comet.totalsBasic();
+
+```
+
+#### Ethers.js v5.x
+
+```js hljs language-javascript
+const comet = new ethers.Contract(contractAddress, abiJson, provider);
+const [ baseSupplyIndex, baseBorrowIndex, trackingSupplyIndex, trackingBorrowIndex, totalSupplyBase, totalBorrowBase, lastAccrualTime, pauseFlags ] = await comet.callStatic.totalsBasic();
+
+```
+
+### Get Base Accrual Scale
+
+This function gets the scale for the base asset tracking accrual.
+
+#### Comet
+
+```solidity hljs
+function baseAccrualScale() override external pure returns (uint64)
+
+```
+
+- `RETURNS`: The integer used to scale down the base accrual when calculating a decimal value.
+
+#### Solidity
+
+```solidity hljs
+Comet comet = Comet(0xCometAddress);
+uint baseAccrualScale = comet.baseAccrualScale();
+
+```
+
+#### Ethers.js v5.x
+
+```js hljs language-javascript
+const comet = new ethers.Contract(contractAddress, abiJson, provider);
+const baseAccrualScale = await comet.callStatic.baseAccrualScale();
+
+```
+
+### Get Base Index Scale
+
+This function gets the scale for the base asset index.
+
+#### Comet
+
+```solidity hljs
+function baseIndexScale() override external pure returns (uint64)
+
+```
+
+- `RETURNS`: The integer used to scale down the index when calculating a decimal value.
+
+#### Solidity
+
+```solidity hljs
+Comet comet = Comet(0xCometAddress);
+uint baseIndexScale = comet.baseIndexScale();
+
+```
+
+#### Ethers.js v5.x
+
+```js hljs language-javascript
+const comet = new ethers.Contract(contractAddress, abiJson, provider);
+const baseIndexScale = await comet.callStatic.baseIndexScale();
+
+```
+
+### Get Factor Scale
+
+This function gets the scale for all protocol factors, i.e. borrow collateral factor.
+
+#### Comet
+
+```solidity hljs
+function factorScale() override external pure returns (uint64)
+
+```
+
+- `RETURNS`: The integer used to scale down the factor when calculating a decimal value.
+
+#### Solidity
+
+```solidity hljs
+Comet comet = Comet(0xCometAddress);
+uint factorScale = comet.factorScale();
+
+```
+
+#### Ethers.js v5.x
+
+```js hljs language-javascript
+const comet = new ethers.Contract(contractAddress, abiJson, provider);
+const factorScale = await comet.callStatic.factorScale();
+
+```
+
+### Get Price Scale
+
+This function gets the scale integer for USD prices in the protocol, i.e. `8 decimals = 1e8`.
+
+#### Comet
+
+```solidity hljs
+function priceScale() override external pure returns (uint64)
+
+```
+
+- `RETURNS`: The integer used to scale down a price when calculating a decimal value.
+
+#### Solidity
+
+```solidity hljs
+Comet comet = Comet(0xCometAddress);
+uint priceScale = comet.priceScale();
+
+```
+
+#### Ethers.js v5.x
+
+```js hljs language-javascript
+const comet = new ethers.Contract(contractAddress, abiJson, provider);
+const priceScale = await comet.callStatic.priceScale();
+
+```
+
+### Get Max Assets
+
+This function gets the maximum number of assets that can be simultaneously supported by Compound III.
+
+#### Comet
+
+```solidity hljs
+function maxAssets() override external pure returns (uint8)
+
+```
+
+- `RETURNS`: The maximum number of assets that can be simultaneously supported by Compound III.
+
+#### Solidity
+
+```solidity hljs
+Comet comet = Comet(0xCometAddress);
+uint maxAssets = comet.maxAssets();
+
+```
+
+#### Ethers.js v5.x
+
+```js hljs language-javascript
+const comet = new ethers.Contract(contractAddress, abiJson, provider);
+const maxAssets = await comet.callStatic.maxAssets();
+
+```
+
+## Bulk Actions
+
+The Compound III codebase contains the source code of an external contract called _Bulker_ that is designed to allow multiple Comet functions to be called in a single transaction.
+
+Use cases of the Bulker contract include but are not limited to:
+
+- Supplying of a collateral asset and borrowing of the base asset.
+- Supplying or withdrawing of the native EVM token (like Ether) directly.
+- Transferring or withdrawing of the base asset without leaving dust in the account.
+
+### Invoke
+
+This function allows callers to pass an array of action codes and calldatas that are executed, one by one, in a single transaction.
+
+#### Bulker
+
+```solidity hljs
+/// @notice The action for supplying an asset to Comet
+bytes32 public constant ACTION_SUPPLY_ASSET = "ACTION_SUPPLY_ASSET";
+
+/// @notice The action for supplying a native asset (e.g. ETH on Ethereum mainnet) to Comet
+bytes32 public constant ACTION_SUPPLY_NATIVE_TOKEN = "ACTION_SUPPLY_NATIVE_TOKEN";
+
+/// @notice The action for transferring an asset within Comet
+bytes32 public constant ACTION_TRANSFER_ASSET = "ACTION_TRANSFER_ASSET";
+
+/// @notice The action for withdrawing an asset from Comet
+bytes32 public constant ACTION_WITHDRAW_ASSET = "ACTION_WITHDRAW_ASSET";
+
+/// @notice The action for withdrawing a native asset from Comet
+bytes32 public constant ACTION_WITHDRAW_NATIVE_TOKEN = "ACTION_WITHDRAW_NATIVE_TOKEN";
+
+/// @notice The action for claiming rewards from the Comet rewards contract
+bytes32 public constant ACTION_CLAIM_REWARD = "ACTION_CLAIM_REWARD";
+
+function invoke(bytes32[] calldata actions, bytes[] calldata data) external payable
+
+```
+
+- `actions`: An array of bytes32 strings that correspond to the actions defined in the contract.
+- `data`: An array of calldatas for each action to be called in the invoke transaction.
+  - Supply Asset, Withdraw Asset, Transfer Asset
+    - `comet`: The address of the Comet instance to interact with.
+    - `to`: The destination address, within or external to the protocol.
+    - `asset`: The address of the ERC-20 asset contract.
+    - `amount`: The amount of the asset as an unsigned integer scaled up by 10 to the “decimals” integer in the asset’s contract.
+  - Supply Native, Withdraw Native (native chain token like ETH on Ethereum Mainnet)
+    - `comet`: The address of the Comet instance to interact with.
+    - `to`: The destination address, within or external to the protocol.
+    - `amount`: The amount of the native token as an unsigned integer scaled up by 10 to the number of decimals of precision of the native EVM token.
+- `RETURN`: No return, reverts on error.
+
+#### Solidity
+
+```solidity hljs
+Bulker bulker = Bulker(0xBulkerAddress);
+// ERC-20 `approve` the bulker. Then Comet `allow` the bulker to be a manager before calling `invoke`.
+bytes memory supplyAssetCalldata = (abi.encode('0xCometAddress', '0xAccount', '0xAsset', amount);
+bulker.invoke([ 'ACTION_SUPPLY_ASSET' ], [ supplyAssetCalldata ]);
+
+```
+
+#### Ethers.js v5.x
+
+```js hljs language-javascript
+const bulker = new ethers.Contract(contractAddress, abiJson, provider);
+// ERC-20 `approve` the bulker. Then Comet `allow` the bulker to be a manager before calling `invoke`.
+const supplyAssetCalldata = ethers.utils.defaultAbiCoder.encode(['address', 'address', 'address', 'uint'], ['0xCometAddress', '0xAccount', '0xAsset', amount]);
+await bulker.invoke([ 'ACTION_SUPPLY_ASSET' ], [ supplyAssetCalldata ]);
+
+```
+
+## Compound Interest Rates
+- [Compound III](https://docs.compound.finance/)
+- [Interest Rates](https://docs.compound.finance/interest-rates/)
+- [Collateral & Borrowing](https://docs.compound.finance/collateral-and-borrowing/)
+- [Liquidation](https://docs.compound.finance/liquidation/)
+- [Account Management](https://docs.compound.finance/account-management/)
+- [Protocol Rewards](https://docs.compound.finance/protocol-rewards/)
+- [Governance](https://docs.compound.finance/governance/)
+- [Helper Functions](https://docs.compound.finance/helper-functions/)
+
+# Interest Rates
+
+Users with a positive balance of the base asset earn interest, denominated in the base asset, based on a supply rate model; users with a negative balance pay interest based on a borrow rate model. These are separate interest rate models, and set by governance.
+
+The supply and borrow interest rates are a function of the utilization rate of the base asset. Each model includes a utilization rate “kink” - above this point the interest rate increases more rapidly. Interest accrues every second using the block timestamp.
+
+Collateral assets do not earn or pay interest.
+
+### Get Supply Rate
+
+This function returns the per second supply rate as the decimal representation of a percentage scaled up by `10 ^ 18`. The formula for producing the supply rate is:
+
+```hljs ini
+## If the Utilization is less than or equal to the Kink parameter
+
+SupplyRate = supplyPerSecondInterestRateBase + supplyPerSecondInterestRateSlopeLow * utilization
+
+## Else
+
+SupplyRate = supplyPerSecondInterestRateBase + supplyPerSecondInterestRateSlopeLow * supplyKink + supplyPerSecondInterestRateSlopeHigh * (utilization - supplyKink)
+
+```
+
+To calculate the Compound III supply APR as a percentage, pass the current utilization to this function, and divide the result by `10 ^ 18` and multiply by the approximate number of seconds in one year and scale up by 100.
+
+```hljs solidity
+Seconds Per Year = 60 * 60 * 24 * 365
+Utilization = getUtilization()
+Supply Rate = getSupplyRate(Utilization)
+Supply APR = Supply Rate / (10 ^ 18) * Seconds Per Year * 100
+
+```
+
+#### Comet
+
+```solidity hljs
+function getSupplyRate(uint utilization) public view returns (uint64)
+
+```
+
+- `utilization`: The utilization at which to calculate the rate.
+- `RETURNS`: The per second supply rate as the decimal representation of a percentage scaled up by `10 ^ 18`. E.g. `317100000` indicates, roughly, a 1% APR.
+
+#### Solidity
+
+```solidity hljs
+Comet comet = Comet(0xCometAddress);
+uint supplyRate = comet.getSupplyRate(0.8e18);
+
+```
+
+#### Ethers.js v5.x
+
+```js hljs language-javascript
+const comet = new ethers.Contract(contractAddress, abiJson, provider);
+const supplyRate = await comet.callStatic.getSupplyRate(0.8e18);
+
+```
+
+### Get Borrow Rate
+
+This function returns the per second borrow rate as the decimal representation of a percentage scaled up by `10 ^ 18`. The formula for producing the borrow rate is:
+
+```hljs ini
+## If the Utilization is less than or equal to the Kink parameter
+
+BorrowRate = borrowPerSecondInterestRateBase + borrowPerSecondInterestRateSlopeLow * utilization
+
+## Else
+
+BorrowRate = borrowPerSecondInterestRateBase + borrowPerSecondInterestRateSlopeLow * borrowKink + borrowPerSecondInterestRateSlopeHigh * (utilization - borrowKink)
+
+```
+
+To calculate the Compound III borrow APR as a percentage, pass the current utilization to this function, and divide the result by `10 ^ 18` and multiply by the approximate number of seconds in one year and scale up by 100.
+
+```hljs solidity
+Seconds Per Year = 60 * 60 * 24 * 365
+Utilization = getUtilization()
+Borrow Rate = getBorrowRate(Utilization)
+Borrow APR = Borrow Rate / (10 ^ 18) * Seconds Per Year * 100
+
+```
+
+#### Comet
+
+```solidity hljs
+function getBorrowRate(uint utilization) public view returns (uint64)
+
+```
+
+- `utilization`: The utilization at which to calculate the rate.
+- `RETURNS`: The per second borrow rate as the decimal representation of a percentage scaled up by `10 ^ 18`. E.g. `317100000` indicates, roughly, a 1% APR.
+
+#### Solidity
+
+```solidity hljs
+Comet comet = Comet(0xCometAddress);
+uint borrowRate = comet.getBorrowRate(0.8e18);
+
+```
+
+#### Ethers.js v5.x
+
+```js hljs language-javascript
+const comet = new ethers.Contract(contractAddress, abiJson, provider);
+const borrowRate = await comet.callStatic.getBorrowRate(0.8e18);
+
+```
+
+### Get Utilization
+
+This function returns the current protocol utilization of the base asset. The formula for producing the utilization is:
+
+`Utilization = TotalBorrows / TotalSupply`
+
+#### Comet
+
+```solidity hljs
+function getUtilization() public view returns (uint)
+
+```
+
+- `RETURNS`: The current protocol utilization percentage as a decimal, represented by an unsigned integer, scaled up by `10 ^ 18`. E.g. `1e17 or 100000000000000000` is 10% utilization.
+
+#### Solidity
+
+```solidity hljs
+Comet comet = Comet(0xCometAddress);
+uint utilization = comet.getUtilization(); // example: 10000000000000000 (1%)
+
+```
+
+#### Ethers.js v5.x
+
+```js hljs language-javascript
+const comet = new ethers.Contract(contractAddress, abiJson, provider);
+const utilization = await comet.callStatic.getUtilization();
+
+```
+
+## Compound III Rewards
+- [Compound III](https://docs.compound.finance/)
+- [Interest Rates](https://docs.compound.finance/interest-rates/)
+- [Collateral & Borrowing](https://docs.compound.finance/collateral-and-borrowing/)
+- [Liquidation](https://docs.compound.finance/liquidation/)
+- [Account Management](https://docs.compound.finance/account-management/)
+- [Protocol Rewards](https://docs.compound.finance/protocol-rewards/)
+- [Governance](https://docs.compound.finance/governance/)
+- [Helper Functions](https://docs.compound.finance/helper-functions/)
+
+# Protocol Rewards
+
+Compound III has a built-in system for tracking rewards for accounts that use the protocol. The full history of accrual of rewards are tracked for suppliers and borrowers of the base asset. The rewards can be any ERC-20 token. In order for rewards to accrue to Compound III accounts, the configuration’s `baseMinForRewards` threshold for total supply of the base asset must be met.
+
+### Reward Accrual Tracking
+
+The reward accrual is tracked in the Comet contract and rewards can be claimed by users from an external Comet Rewards contract. Rewards are accounted for with up to 6 decimals of precision.
+
+#### Comet
+
+```solidity hljs
+function baseTrackingAccrued(address account) external view returns (uint64);
+
+```
+
+- `RETURNS`: Returns the amount of reward token accrued based on usage of the base asset within the protocol for the specified account, scaled up by `10 ^ 6`.
+
+#### Solidity
+
+```solidity hljs
+Comet comet = Comet(0xCometAddress);
+uint64 accrued = comet.baseTrackingAccrued(0xAccount);
+
+```
+
+#### Ethers.js v5.x
+
+```js hljs language-javascript
+const comet = new ethers.Contract(contractAddress, abiJson, provider);
+const accrued = await comet.callStatic.baseTrackingAccrued('0xAccount');
+
+```
+
+### Get Reward Accrued
+
+The amount of reward token accrued but not yet claimed for an account can be fetched from the external Comet Rewards contract.
+
+#### Comet Rewards
+
+```solidity hljs
+struct RewardOwed {
+    address token;
+    uint owed;
+}
+
+function getRewardOwed(address comet, address account) external returns (RewardOwed memory)
+
+```
+
+- `RETURNS`: Returns the amount of reward token accrued but not yet claimed, scaled up by 10 to the “decimals” integer in the reward token’s contract.
+
+#### Solidity
+
+```solidity hljs
+CometRewards rewards = CometRewards(0xRewardsAddress);
+RewardOwed reward = rewards.getRewardOwed(0xCometAddress, 0xAccount);
+
+```
+
+#### Ethers.js v5.x
+
+```js hljs language-javascript
+const rewards = new ethers.Contract(contractAddress, abiJson, provider);
+const [ tokenAddress, amtOwed ] = await rewards.callStatic.getRewardOwed(cometAddress, accountAddress);
+
+```
+
+### Claim Rewards
+
+Any account can claim rewards for a specific account. Account owners and managers can also claim rewards to a specific address. The claim functions are available on the external Comet Rewards contract.
+
+#### Comet Rewards
+
+```solidity hljs
+function claim(address comet, address src, bool shouldAccrue) external
+
+```
+
+```solidity hljs
+function claimTo(address comet, address src, address to, bool shouldAccrue) external
+
+```
+
+- `comet`: The address of the Comet contract.
+- `src`: The account in which to claim rewards.
+- `to`: The account in which to transfer the claimed rewards.
+- `shouldAccrue`: If true, the protocol will account for the rewards owed to the account as of the current block before transferring.
+- `RETURN`: No return, reverts on error.
+
+#### Solidity
+
+```solidity hljs
+CometRewards rewards = CometRewards(0xRewardsAddress);
+rewards.claim(0xCometAddress, 0xAccount, true);
+
+```
+
+#### Ethers.js v5.x
+
+```js hljs language-javascript
+const rewards = new ethers.Contract(contractAddress, abiJson, provider);
+await rewards.claim(cometAddress, accountAddress, true);
+
+```
+
+## Compound Security Overview
+- [Compound II](https://docs.compound.finance/v2/)
+- [cTokens](https://docs.compound.finance/v2/ctokens/)
+- [Comptroller](https://docs.compound.finance/v2/comptroller/)
+- [Governance](https://docs.compound.finance/v2/governance/)
+- [Price Feed](https://docs.compound.finance/v2/prices/)
+- [Security](https://docs.compound.finance/v2/security/)
+
+# Security
+
+## Introduction
+
+The security of the Compound protocol is our highest priority; our development team, alongside third-party auditors and consultants, has invested considerable effort to create a protocol that we believe is safe and dependable. All contract code and balances are publicly verifiable, and security researchers are eligible for a bug bounty for reporting undiscovered vulnerabilities.
+
+We believe that size, visibility, and time are the true test for the security of a smart contract; please exercise caution, and make your own determination of security and suitability.
+
+## Audits
+
+The Compound protocol has been reviewed & audited by [Trail of Bits](https://www.trailofbits.com/) and [OpenZeppelin](https://openzeppelin.com/).
+
+1. [Trail of Bits - April 2019](https://github.com/trailofbits/publications/blob/master/reviews/compound-2.pdf)
+2. [OpenZeppelin - August 2019](https://blog.openzeppelin.com/compound-audit/)
+3. [Trail of Bits - August 2019](https://github.com/trailofbits/publications/blob/master/reviews/compound-3.pdf)
+4. [OpenZeppelin - Timelock & Pause Guardian](https://blog.openzeppelin.com/compound-finance-patch-audit)
+5. [OpenZeppelin - cDAI](https://blog.openzeppelin.com/compound-finance-mcd-dsr-integration/)
+6. [OpenZeppelin - COMP & Governance](https://blog.openzeppelin.com/compound-alpha-governance-system-audit/)
+7. [Trail of Bits - February 2020](https://github.com/trailofbits/publications/blob/master/reviews/compound-governance.pdf)
+8. [OpenZeppelin - Tether](https://blog.openzeppelin.com/compound-tether-integration-audit/)
+9. [OpenZeppelin - COMP Distribution](https://blog.openzeppelin.com/compound-comp-distribution-system-audit/)
+
+## Formal Verification
+
+The Compound protocol was developed with a specifications of security principles, and formally verified by [Certora](https://www.certora.com/) using Certora ASA (Accurate Static Analysis), which is integrated into Compound’s continuous integration system.
+
+01 Certora Verification Summary
+
+## Economic Security
+
+[Gauntlet](https://gauntlet.network/) has constructed a simulation-based market stress-testing platform to evaluate the economic security of the Compound protocol, as it scales supported assets and volume.
+
+01 Gauntlet Market Risk Assessment
+
+## Bug Bounty Program
+
+Security is core to our values, and we value the input of hackers acting in good faith to help us maintain the highest standard for the security and safety of the Ethereum ecosystem. The Compound protocol, while it has gone through professional audits and formal verification, depends on new technology that may contain undiscovered vulnerabilities.
+
+The Compound protocol bug bounty program is run entirely by the community with collaboration from Immunefi.
+
+[Bug Bounty Dashboard](https://immunefi.com/bug-bounty/compoundfinance/information/)
+
+## Compound Governance Overview
+- [Compound II](https://docs.compound.finance/v2/)
+- [cTokens](https://docs.compound.finance/v2/ctokens/)
+- [Comptroller](https://docs.compound.finance/v2/comptroller/)
+- [Governance](https://docs.compound.finance/v2/governance/)
+- [Price Feed](https://docs.compound.finance/v2/prices/)
+- [Security](https://docs.compound.finance/v2/security/)
+
+# Governance
+
+## Introduction
+
+The Compound protocol is governed and upgraded by COMP token-holders, using three distinct components; the [COMP](https://etherscan.io/token/0xc00e94cb662c3520282e6f5717214004a7f26888) token, governance module ( [Governor Bravo](https://etherscan.io/address/0xc0da02939e1441f497fd74f78ce7decb17b66529)), and [Timelock](https://etherscan.io/address/0x6d903f6003cca6255d85cca4d3b5e5146dc33925#code). Together, these contracts allow the community to propose, vote, and implement changes through the administrative functions of a cToken or the Comptroller. Proposals can modify system parameters, support new markets, or add entirely new functionality to the protocol.
+
+COMP token-holders can delegate their voting rights to themselves, or an address of their choice. Addresses delegated at least 25,000 COMP can create governance proposals; any address can lock 100 COMP to create an Autonomous Proposal, which becomes a governance proposal after being delegated 25,000 COMP.
+
+When a governance proposal is created, it enters a 2 day review period, after which voting weights are recorded and voting begins. Voting lasts for 3 days; if a majority, and at least 400,000 votes are cast for the proposal, it is queued in the Timelock, and can be implemented 2 days later. In total, any change to the protocol takes at least one week. ![Governance Diagram](https://docs.compound.finance/public/img/gov_diagram.png)
+
+## COMP
+
+COMP is an [ERC-20](https://github.com/ethereum/EIPs/blob/master/EIPS/eip-20.md) token that allows the owner to delegate voting rights to any address, including their own address. Changes to the owner’s token balance automatically adjust the voting rights of the delegate.
+
+## Delegate
+
+Delegate votes from the sender to the delegatee. Users can delegate to 1 address at a time, and the number of votes added to the delegatee’s vote count is equivalent to the balance of COMP in the user’s account. Votes are delegated from the current block and onward, until the sender delegates again, or transfers their COMP.
+
+#### COMP
+
+```solidity hljs
+function delegate(address delegatee)
+
+```
+
+- `delegatee`: The address in which the sender wishes to delegate their votes to.
+- `msg.sender`: The address of the COMP token holder that is attempting to delegate their votes.
+- `RETURN`: No return, reverts on error.
+
+#### Solidity
+
+```solidity hljs
+Comp comp = Comp(0x123...); // contract address
+comp.delegate(delegateeAddress);
+
+```
+
+#### Web3 1.2.6
+
+```js hljs language-javascript
+const tx = await comp.methods.delegate(delegateeAddress).send({ from: sender });
+
+```
+
+## Delegate By Signature
+
+Delegate votes from the signatory to the delegatee. This method has the same purpose as Delegate but it instead enables offline signatures to participate in Compound governance vote delegation. For more details on how to create an offline signature, review [EIP-712](https://eips.ethereum.org/EIPS/eip-712).
+
+#### COMP
+
+```solidity hljs
+function delegateBySig(address delegatee, uint nonce, uint expiry, uint8 v, bytes32 r, bytes32 s)
+
+```
+
+- `delegatee`: The address in which the sender wishes to delegate their votes to.
+- `nonce`: The contract state required to match the signature. This can be retrieved from the contract’s public nonces mapping.
+- `expiry`: The time at which to expire the signature. A block timestamp as seconds since the unix epoch (uint).
+- `v`: The recovery byte of the signature.
+- `r`: Half of the ECDSA signature pair.
+- `s`: Half of the ECDSA signature pair.
+- `RETURN`: No return, reverts on error.
+
+#### Solidity
+
+```solidity hljs
+Comp comp = Comp(0x123...); // contract address
+comp.delegateBySig(delegateeAddress, nonce, expiry, v, r, s);
+
+```
+
+#### Web3 1.2.6
+
+```js hljs language-javascript
+const tx = await comp.methods.delegateBySig(delegateeAddress, nonce, expiry, v, r, s).send({});
+
+```
+
+## Get Current Votes
+
+Gets the balance of votes for an account as of the current block.
+
+#### COMP
+
+```solidity hljs
+function getCurrentVotes(address account) returns (uint96)
+
+```
+
+- `account`: Address of the account in which to retrieve the number of votes.
+- `RETURN`: The number of votes (integer).
+
+#### Solidity
+
+```solidity hljs
+Comp comp = Comp(0x123...); // contract address
+uint votes = comp.getCurrentVotes(0xabc...);
+
+```
+
+#### Web3 1.2.6
+
+```solidity hljs
+const account = '0x123...'; // contract address
+const votes = await comp.methods.getCurrentVotes(account).call();
+
+```
+
+## Get Prior Votes
+
+Gets the prior number of votes for an account at a specific block number. The block number passed must be a finalized block or the function will revert.
+
+#### COMP
+
+```solidity hljs
+function getPriorVotes(address account, uint blockNumber) returns (uint96)
+
+```
+
+- `account`: Address of the account in which to retrieve the prior number of votes.
+- `blockNumber`: The block number at which to retrieve the prior number of votes.
+- `RETURN`: The number of prior votes.
+
+#### Solidity
+
+```solidity hljs
+Comp comp = Comp(0x123...); // contract address
+uint priorVotes = comp.getPriorVotes(account, blockNumber);
+
+```
+
+#### Web3 1.2.6
+
+```js hljs language-javascript
+const priorVotes = await comp.methods.getPriorVotes(account, blockNumber).call();
+
+```
+
+## Key Events
+
+| Event | Description |
+| --- | --- |
+| `DelegateChanged(address indexed delegator, address indexed fromDelegate, address indexed toDelegate)` | An event thats emitted when an account changes its [delegate](https://docs.compound.finance/v2/governance#delegate). |
+| `DelegateVotesChanged(address indexed delegate, uint previousBalance, uint newBalance)` | An event thats emitted when a delegate account’s vote balance changes. |
+| `ProposalCreated(uint id, address proposer, address[] targets, uint[] values, string[] signatures, bytes[] calldatas, uint startBlock, uint endBlock, string description)` | An event emitted when a new [proposal](https://docs.compound.finance/v2/governance#propose) is created. |
+| `VoteCast(address voter, uint proposalId, bool support, uint votes)` | An event emitted when a [vote has been cast](https://docs.compound.finance/v2/governance#cast-vote) on a proposal. |
+| `ProposalCanceled(uint id)` | An event emitted when a proposal has been [canceled](https://docs.compound.finance/v2/governance#cancel). |
+| `ProposalQueued(uint id, uint eta)` | An event emitted when a proposal has been [queued](https://docs.compound.finance/v2/governance#queue) in the [Timelock](https://docs.compound.finance/v2/governance#timelock). |
+| `ProposalExecuted(uint id)` | An event emitted when a proposal has been [executed](https://docs.compound.finance/v2/governance#execute) in the [Timelock](https://docs.compound.finance/v2/governance#timelock). |
+
+## Governor Bravo
+
+Governor Bravo is the governance module of the protocol; it allows addresses with more than 25,000 COMP to propose changes to the protocol. Addresses that held voting weight, at the start of the proposal, invoked through the getpriorvotes function, can submit their votes during a 3 day voting period. If a majority, and at least 400,000 votes are cast for the proposal, it is queued in the Timelock, and can be implemented after 2 days.
+
+## Quorum Votes
+
+The required minimum number of votes in support of a proposal for it to succeed.
+
+#### Governor Bravo
+
+```solidity hljs
+function quorumVotes() public pure returns (uint)
+
+```
+
+- `RETURN`: The minimum number of votes required for a proposal to succeed.
+
+#### Solidity
+
+```solidity hljs
+GovernorBravo gov = GovernorBravo(0x123...); // contract address
+uint quorum = gov.quorumVotes();
+
+```
+
+#### Web3 1.2.6
+
+```js hljs language-javascript
+const quorum = await gov.methods.quorumVotes().call();
+
+```
+
+## Proposal Threshold
+
+The minimum number of votes required for an account to create a proposal. This can be changed through governance.
+
+#### Governor Bravo
+
+```solidity hljs
+function proposalThreshold() returns (uint)
+
+```
+
+- `RETURN`: The minimum number of votes required for an account to create a proposal.
+
+#### Solidity
+
+```solidity hljs
+GovernorBravo gov = GovernorBravo(0x123...); // contract address
+uint threshold = gov.proposalThreshold();
+
+```
+
+#### Web3 1.2.6
+
+```js hljs language-javascript
+const threshold = await gov.methods.proposalThreshold().call();
+
+```
+
+## Proposal Max Operations
+
+The maximum number of actions that can be included in a proposal. Actions are functions calls that will be made when a proposal succeeds and executes.
+
+#### Governor Bravo
+
+```solidity hljs
+function proposalMaxOperations() returns (uint)
+
+```
+
+- `RETURN`: The maximum number of actions that can be included in a proposal.
+
+#### Solidity
+
+```solidity hljs
+GovernorBravo gov = GovernorBravo(0x123...); // contract address
+uint operations = gov.proposalMaxOperations();
+
+```
+
+#### Web3 1.2.6
+
+```js hljs language-javascript
+const operations = await gov.methods.proposalMaxOperations().call();
+
+```
+
+## Voting Delay
+
+The number of Ethereum blocks to wait before voting on a proposal may begin. This value is added to the current block number when a proposal is created. This can be changed through governance.
+
+#### Governor Bravo
+
+```solidity hljs
+function votingDelay() returns (uint)
+
+```
+
+- `RETURN`: Number of blocks to wait before voting on a proposal may begin.
+
+#### Solidity
+
+```solidity hljs
+GovernorBravo gov = GovernorBravo(0x123...); // contract address
+uint blocks = gov.votingDelay();
+
+```
+
+#### Web3 1.2.6
+
+```js hljs language-javascript
+const blocks = await gov.methods.votingDelay().call();
+
+```
+
+## Voting Period
+
+The duration of voting on a proposal, in Ethereum blocks. This can be changed through governance.
+
+#### Governor Bravo
+
+```solidity hljs
+function votingPeriod() returns (uint)
+
+```
+
+- `RETURN`: The duration of voting on a proposal, in Ethereum blocks.
+
+#### Solidity
+
+```solidity hljs
+GovernorBravo gov = GovernorBravo(0x123...); // contract address
+uint blocks = gov.votingPeriod();
+
+```
+
+#### Web3 1.2.6
+
+```js hljs language-javascript
+const blocks = await gov.methods.votingPeriod().call();
+
+```
+
+## Propose
+
+Create a Proposal to change the protocol. E.g., A proposal can set a cToken’s interest rate model or risk parameters on the Comptroller. Proposals will be voted on by delegated voters. If there is sufficient support before the voting period ends, the proposal shall be automatically enacted. Enacted proposals are queued and executed in the Compound Timelock contract.
+
+The sender must hold more COMP than the current proposal threshold ( `proposalThreshold()`) as of the immediately previous block. If the threshold is 25,000 COMP, the sender must have been delegated more than 1% of all COMP in order to create a proposal. The proposal can have up to 10 actions (based on `proposalMaxOperations()`).
+
+The proposer cannot create another proposal if they currently have a pending or active proposal. It is not possible to queue two identical actions in the same block (due to a restriction in the Timelock), therefore actions in a single proposal must be unique, and unique proposals that share an identical action must be queued in different blocks.
+
+#### Governor Bravo
+
+```solidity hljs
+function propose(address[] memory targets, uint[] memory values, string[] memory signatures, bytes[] memory calldatas, string memory description) returns (uint)
+
+```
+
+- `targets`: The ordered list of target addresses for calls to be made during proposal execution. This array must be the same length as all other array parameters in this function.
+- `values`: The ordered list of values (i.e. msg.value) to be passed to the calls made during proposal execution. This array must be the same length as all other array parameters in this function.
+- `signatures`: The ordered list of function signatures to be passed during execution. This array must be the same length as all other array parameters in this function.
+- `calldatas`: The ordered list of data to be passed to each individual function call during proposal execution. This array must be the same length as all other array parameters in this function.
+- `description`: A human readable description of the proposal and the changes it will enact.
+- `RETURN`: The ID of the newly created proposal.
+
+#### Solidity
+
+```solidity hljs
+GovernorBravo gov = GovernorBravo(0x123...); // contract address
+uint proposalId = gov.propose(targets, values, signatures, calldatas, description);
+
+```
+
+#### Web3 1.2.6
+
+```js hljs language-javascript
+const tx = gov.methods.propose(targets, values, signatures, calldatas, description).send({ from: sender });
+
+```
+
+## Queue
+
+After a proposal has succeeded, it is moved into the [Timelock](https://docs.compound.finance/v2/governance#timelock) waiting period using this function. The waiting period (e.g. 2 days) begins when this function is called. The queue function can be called by any Ethereum address.
+
+#### Governor Bravo
+
+```solidity hljs
+function queue(uint proposalId)
+
+```
+
+- `proposalId`: ID of a proposal that has succeeded.
+- `RETURN`: No return, reverts on error.
+
+#### Solidity
+
+```solidity hljs
+GovernorBravo gov = GovernorBravo(0x123...); // contract address
+gov.queue(proposalId);
+
+```
+
+#### Web3 1.2.6
+
+```js hljs language-javascript
+const tx = gov.methods.queue(proposalId).send({ from: sender });
+
+```
+
+## Execute
+
+After the [Timelock](https://docs.compound.finance/v2/governance#timelock) waiting period has elapsed, a proposal can be executed using this function, which applies the proposal changes to the target contracts. This will invoke each of the actions described in the proposal. The execute function can be called by any Ethereum address. Note: this function is _payable_, so the Timelock contract can invoke payable functions that were selected in the proposal.
+
+#### Governor Bravo
+
+```solidity hljs
+function execute(uint proposalId) payable
+
+```
+
+- `proposalId`: ID of a succeeded proposal to execute.
+- `RETURN`: No return, reverts on error.
+
+#### Solidity
+
+```solidity hljs
+GovernorBravo gov = GovernorBravo(0x123...); // contract address
+gov.execute(proposalId).value(999).gas(999)();
+
+```
+
+#### Web3 1.2.6
+
+```js hljs language-javascript
+const tx = gov.methods.execute(proposalId).send({ from: sender, value: 1 });
+
+```
+
+## Cancel
+
+A proposal is eligible to be cancelled at any time prior to its execution, including while queued in the [Timelock](https://docs.compound.finance/v2/governance#timelock), using this function.
+
+The cancel function can be called by the proposal creator, or any Ethereum address, if the proposal creator fails to maintain more delegated votes than the proposal threshold (e.g. 25,000).
+
+#### Governor Bravo
+
+```solidity hljs
+function cancel(uint proposalId)
+
+```
+
+- `proposalId`: ID of a proposal to cancel. The proposal cannot have already been executed.
+- `RETURN`: No return, reverts on error.
+
+#### Solidity
+
+```solidity hljs
+GovernorBravo gov = GovernorBravo(0x123...); // contract address
+gov.cancel(proposalId);
+
+```
+
+#### Web3 1.2.6
+
+```js hljs language-javascript
+const tx = gov.methods.cancel(proposalId).send({ from: sender });
+
+```
+
+## Get Actions
+
+Gets the actions of a selected proposal. Pass a proposal ID and get the targets, values, signatures and calldatas of that proposal.
+
+#### Governor Bravo
+
+```solidity hljs
+function getActions(uint proposalId) returns (uint proposalId) public view returns (address[] memory targets, uint[] memory values, string[] memory signatures, bytes[] memory calldatas)
+
+```
+
+- `proposalId`: ID of a proposal in which to get its actions.
+- `RETURN`: Reverts if the proposal ID is invalid. If successful, the following 4 references are returned.
+1. Array of addresses of contracts the proposal calls.
+2. Array of unsigned integers the proposal uses as values.
+3. Array of strings of the proposal’s signatures.
+4. Array of calldata bytes of the proposal.
+
+#### Solidity
+
+```solidity hljs
+GovernorBravo gov = GovernorBravo(0x123...); // contract address
+uint proposalId = 123;
+(address[] memory targets, uint[] memory values, string[] memory signatures, bytes[] memory calldatas) = gov.getActions(proposalId);
+
+```
+
+#### Web3 1.2.6
+
+```js hljs language-javascript
+const {0: targets, 1: values, 2: signatures, 3: calldatas} = gov.methods.getActions(proposalId).call();
+
+```
+
+## Get Receipt
+
+Gets a proposal ballot receipt of the indicated voter.
+
+#### Governor Bravo
+
+```solidity hljs
+function getReceipt(uint proposalId, address voter) returns (Receipt memory)
+
+```
+
+- `proposalId`: ID of the proposal in which to get a voter’s ballot receipt.
+- `voter`: Address of the account of a proposal voter.
+- `RETURN`: Reverts on error. If successful, returns a Receipt struct for the ballot of the voter address.
+
+#### Solidity
+
+```solidity hljs
+GovernorBravo gov = GovernorBravo(0x123...); // contract address
+Receipt ballot = gov.getReceipt(proposalId, voterAddress);
+
+```
+
+#### Web3 1.2.6
+
+```js hljs language-javascript
+const proposalId = 11;
+const voterAddress = '0x123...';
+const result = await gov.methods.getReceipt(proposalId, voterAddress).call();
+const { hasVoted, support, votes } = result;
+
+```
+
+## State
+
+Gets the proposal state for the specified proposal. The return value, `ProposalState` is an enumerated type defined in the Governor Bravo contract.
+
+#### Governor Bravo
+
+```solidity hljs
+function state(uint proposalId) returns (ProposalState)
+
+```
+
+- `proposalId`: ID of a proposal in which to get its state.
+- `RETURN`: Enumerated type ProposalState. The types are Pending, Active, Canceled, Defeated, Succeeded, Queued, Expired, andExecuted.
+
+#### Solidity
+
+```solidity hljs
+GovernorBravo gov = GovernorBravo(0x123...); // contract address
+GovernorBravo.ProposalState state = gov.state(123);
+
+```
+
+#### Web3 1.2.6
+
+```js hljs language-javascript
+const proposalStates = ['Pending', 'Active', 'Canceled', 'Defeated', 'Succeeded', 'Queued', 'Expired', 'Executed'];
+const proposalId = 123;
+result = await gov.methods.state(proposalId).call();
+const proposalState = proposalStates[result];
+
+```
+
+## Cast Vote
+
+Cast a vote on a proposal. The account’s voting weight is determined by the number of votes the account had delegated to it at the time the proposal state became active.
+
+#### Governor Bravo
+
+```solidity hljs
+function castVote(uint proposalId, uint8 support)
+
+```
+
+- `proposalId`: ID of a proposal in which to cast a vote.
+- `support`: An integer of 0 for against, 1 for in-favor, and 2 for abstain.
+- `RETURN`: No return, reverts on error.
+
+#### Solidity
+
+```solidity hljs
+GovernorBravo gov = GovernorBravo(0x123...); // contract address
+gov.castVote(proposalId, 1);
+
+```
+
+#### Web3 1.2.6
+
+```js hljs language-javascript
+const tx = gov.methods.castVote(proposalId, 0).send({ from: sender });
+
+```
+
+## Cast Vote With Reason
+
+Cast a vote on a proposal with a reason attached to the vote.
+
+#### Governor Bravo
+
+```solidity hljs
+function castVoteWithReason(uint proposalId, uint8 support, string calldata reason)
+
+```
+
+- `proposalId`: ID of a proposal in which to cast a vote.
+- `support`: An integer of 0 for against, 1 for in-favor, and 2 for abstain.
+- `reason`: A string containing the voter’s reason for their vote selection.
+- `RETURN`: No return, reverts on error.
+
+#### Solidity
+
+```solidity hljs
+GovernorBravo gov = GovernorBravo(0x123...); // contract address
+gov.castVoteWithReason(proposalId, 2, "I think...");
+
+```
+
+#### Web3 1.2.6
+
+```js hljs language-javascript
+const tx = gov.methods.castVoteWithReason(proposalId, 0, "I think...").send({ from: sender });
+
+```
+
+## Cast Vote By Signature
+
+Cast a vote on a proposal. The account’s voting weight is determined by the number of votes the account had delegated at the time that proposal state became active. This method has the same purpose as Cast Vote but it instead enables offline signatures to participate in Compound governance voting. For more details on how to create an offline signature, review [EIP-712](https://eips.ethereum.org/EIPS/eip-712).
+
+#### Governor Bravo
+
+```solidity hljs
+function castVoteBySig(uint proposalId, uint8 support, uint8 v, bytes32 r, bytes32 s)
+
+```
+
+- `proposalId`: ID of a proposal in which to cast a vote.
+- `support`: An integer of 0 for against, 1 for in-favor, and 2 for abstain.
+- `v`: The recovery byte of the signature.
+- `r`: Half of the ECDSA signature pair.
+- `s`: Half of the ECDSA signature pair.
+- `RETURN`: No return, reverts on error.
+
+#### Solidity
+
+```solidity hljs
+GovernorBravo gov = GovernorBravo(0x123...); // contract address
+gov.castVoteBySig(proposalId, 0, v, r, s);
+
+```
+
+#### Web3 1.2.6
+
+```js hljs language-javascript
+const tx = await gov.methods.castVoteBySig(proposalId, 1, v, r, s).send({});
+
+```
+
+## Timelock
+
+Each protocol contract is controlled by the [Timelock contract](https://github.com/compound-finance/compound-protocol/blob/master/contracts/Timelock.sol), which can modify system parameters, logic, and contracts in a ‘time-delayed, opt-out’ upgrade pattern. The Timelock has a hard-coded minimum delay which is the least amount of notice possible for a governance action. The Timelock contract queues and executes proposals that have passed a Governance vote.
+
+## Pause Guardian
+
+The Comptroller contract designates a Pause Guardian address capable of disabling protocol functionality. Used only in the event of an unforeseen vulnerability, the Pause Guardian has one and only one ability: to disable a select set of functions: Mint, Borrow, Transfer, and Liquidate. The Pause Guardian cannot unpause an action, nor can it ever prevent users from calling Redeem, or Repay Borrow to close positions and exit the protocol. COMP token-holders designate the Pause Guardian address, which is held by the [Community Multi-Sig](https://etherscan.io/address/0xbbf3f1421d886e9b2c5d716b5192ac998af2012c).
+

@@ -1,0 +1,45 @@
+---
+title: 'useHasPermission'
+description: 'Check if an account has permission to act on behalf of another account'
+---
+
+The `useHasPermission` hook checks if an account has permission to act on behalf of another account.
+
+## Usage
+
+```jsx
+import { useHasPermission } from 'compound-react';
+
+function PermissionCheckDisplay({ ownerAddress, managerAddress }) {
+  const { 
+    hasPermission, 
+    loading, 
+    error 
+  } = useHasPermission(null, ownerAddress, managerAddress);
+  
+  if (loading) return <div>Loading...</div>;
+  if (error) return <div>Error: {error.message}</div>;
+  
+  return (
+    <div>
+      <h2>Permission Check</h2>
+      <p>
+        {hasPermission 
+          ? 'Manager has permission to act on behalf of owner' 
+          : 'Manager does not have permission to act on behalf of owner'}
+      </p>
+    </div>
+  );
+}
+```
+
+## Return Value
+
+```typescript
+{
+  hasPermission: boolean | null;
+  loading: boolean;
+  error: Error | null;
+  refetch: () => Promise<boolean | null>;
+}
+``` 

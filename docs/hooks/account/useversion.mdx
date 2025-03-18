@@ -1,0 +1,37 @@
+---
+title: 'useVersion'
+description: 'Get the current version of the Comet contract'
+---
+
+The `useVersion` hook retrieves the current version of the Comet contract.
+
+## Usage
+
+```jsx
+import { useVersion } from 'compound-react';
+
+function VersionDisplay() {
+  const { version, loading, error } = useVersion();
+  
+  if (loading) return <div>Loading...</div>;
+  if (error) return <div>Error: {error.message}</div>;
+  
+  return (
+    <div>
+      <h2>Comet Version</h2>
+      <p>Version: {version}</p>
+    </div>
+  );
+}
+```
+
+## Return Value
+
+```typescript
+{
+  version: string | null;
+  loading: boolean;
+  error: Error | null;
+  refetch: () => Promise<string | null>;
+}
+``` 

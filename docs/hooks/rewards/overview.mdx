@@ -1,0 +1,141 @@
+---
+title: 'Protocol Rewards'
+description: 'Hooks for working with protocol rewards on Compound III'
+---
+
+This section contains hooks for claiming and managing protocol rewards on Compound III.
+
+## Summary of Protocol Rewards Hooks
+
+- [useBaseTrackingAccrued](#usebasetrackingaccrued): Tracks accrued rewards for the base asset
+- [useGetRewardOwed](#usegetrewardowed): Retrieves the amount of reward token accrued but not yet claimed
+- [useClaimReward](#useclaimreward): Allows users to claim accrued rewards
+
+## useBaseTrackingAccrued
+
+The `useBaseTrackingAccrued` hook tracks accrued rewards for the base asset.
+
+### Usage
+
+```jsx
+import { useBaseTrackingAccrued } from 'compound-react';
+
+function TrackingAccruedDisplay({ accountAddress }) {
+  const { 
+    trackingAccrued, 
+    loading, 
+    error 
+  } = useBaseTrackingAccrued(null, accountAddress);
+  
+  if (loading) return <div>Loading...</div>;
+  if (error) return <div>Error: {error.message}</div>;
+  
+  return (
+    <div>
+      <h2>Tracking Accrued</h2>
+      <p>Tracking Accrued: {trackingAccrued?.toString()}</p>
+    </div>
+  );
+}
+```
+
+### Return Value
+
+```typescript
+{
+  trackingAccrued: BigNumber | null;
+  loading: boolean;
+  error: Error | null;
+  refetch: () => Promise<BigNumber | null>;
+}
+```
+
+## useGetRewardOwed
+
+The `useGetRewardOwed` hook retrieves the amount of reward token accrued but not yet claimed.
+
+### Usage
+
+```jsx
+import { useGetRewardOwed } from 'compound-react';
+
+function RewardOwedDisplay({ accountAddress, rewardsAddress }) {
+  const { 
+    reward, 
+    loading, 
+    error 
+  } = useGetRewardOwed(null, accountAddress, rewardsAddress);
+  
+  if (loading) return <div>Loading...</div>;
+  if (error) return <div>Error: {error.message}</div>;
+  
+  return (
+    <div>
+      <h2>Reward Owed</h2>
+      <p>Token: {reward?.token}</p>
+      <p>Amount: {ethers.utils.formatUnits(reward?.owed || 0, 18)}</p>
+    </div>
+  );
+}
+```
+
+### Return Value
+
+```typescript
+{
+  reward: {
+    token: string;
+    owed: BigNumber;
+  } | null;
+  loading: boolean;
+  error: Error | null;
+  refetch: () => Promise<RewardOwed | null>;
+}
+```
+
+## useClaimReward
+
+The `useClaimReward` hook allows users to claim accrued rewards.
+
+### Usage
+
+```jsx
+import { useClaimReward } from 'compound-react';
+
+function ClaimRewardComponent({ accountAddress, rewardsAddress }) {
+  const { 
+    claimReward, 
+    loading, 
+    error, 
+    txHash 
+  } = useClaimReward(null, accountAddress, rewardsAddress);
+  
+  const handleClaimReward = async () => {
+    // Claim rewards with accrual
+    const shouldAccrue = true;
+    const tx = await claimReward(shouldAccrue);
+    console.log('Claim reward transaction:', tx);
+  };
+  
+  return (
+    <div>
+      <button onClick={handleClaimReward} disabled={loading}>
+        {loading ? 'Claiming...' : 'Claim Rewards'}
+      </button>
+      {error && <p>Error: {error.message}</p>}
+      {txHash && <p>Transaction: {txHash}</p>}
+    </div>
+  );
+}
+```
+
+### Return Value
+
+```typescript
+{
+  claimReward: (shouldAccrue?: boolean) => Promise<string | null>; // Returns transaction hash
+  loading: boolean;
+  error: Error | null;
+  txHash: string | null;
+}
+``` 

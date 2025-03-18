@@ -1,0 +1,57 @@
+---
+title: 'useAllowBySig'
+description: 'Allow or disallow another address to withdraw or transfer on behalf of the sender using EIP-712 signatures'
+---
+
+The `useAllowBySig` hook allows or disallows another address to withdraw or transfer on behalf of the sender's address using EIP-712 signatures for gasless approvals.
+
+## Usage
+
+```jsx
+import { useAllowBySig } from 'compound-react';
+
+function AllowBySigComponent() {
+  const { allowBySig, loading, error, txHash } = useAllowBySig();
+  
+  const handleAllowBySig = async () => {
+    // Allow an address to act on behalf of the sender using a signature
+    const owner = '0xOwner...';
+    const manager = '0xManager...';
+    const isAllowed = true;
+    const nonce = 1; // Get from useUserNonce
+    const expiry = Math.floor(Date.now() / 1000) + 3600; // 1 hour from now
+    const signature = '0xSignature...'; // EIP-712 signature
+    
+    const tx = await allowBySig(owner, manager, isAllowed, nonce, expiry, signature);
+    console.log('AllowBySig transaction:', tx);
+  };
+  
+  return (
+    <div>
+      <button onClick={handleAllowBySig} disabled={loading}>
+        {loading ? 'Processing...' : 'Allow By Signature'}
+      </button>
+      {error && <p>Error: {error.message}</p>}
+      {txHash && <p>Transaction: {txHash}</p>}
+    </div>
+  );
+}
+```
+
+## Return Value
+
+```typescript
+{
+  allowBySig: (
+    owner: string,
+    manager: string,
+    isAllowed: boolean,
+    nonce: number,
+    expiry: number,
+    signature: string
+  ) => Promise<string | null>; // Returns transaction hash
+  loading: boolean;
+  error: Error | null;
+  txHash: string | null;
+}
+``` 

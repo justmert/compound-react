@@ -1,0 +1,77 @@
+---
+title: 'Hooks Overview'
+description: 'Overview of the React hooks provided by Compound React'
+---
+
+Compound React provides a comprehensive set of React hooks for interacting with the Compound III protocol. These hooks are organized into categories based on their functionality.
+
+## [Account Management Hooks](/hooks/account/overview)
+
+Hooks for managing user accounts and permissions:
+
+- `useAllow` - Allow or disallow another address to withdraw or transfer on behalf of the sender
+- `useAllowBySig` - Similar to useAllow but uses EIP-712 signatures for gasless approvals
+- `useUserNonce` - Get the current nonce for a user, used for signed transactions
+- `useVersion` - Get the current version of the Comet contract
+- `useHasPermission` - Check if an account has permission to act on behalf of another account
+- `useTransfer` - Transfer base tokens from the sender to another account
+
+## [Collateral and Borrowing Hooks](/hooks/collateral-borrowing/overview)
+
+Hooks for supplying collateral and borrowing assets:
+
+- `useSupply` - Supply base tokens to the protocol
+- `useWithdraw` - Withdraw base tokens from the protocol
+- `useCollateralBalance` - Get the collateral balance of an account for a specific asset
+- `useIsBorrowCollateralized` - Check if an account has enough collateral for borrowing
+- `useBaseBorrowMin` - Get the minimum borrow amount for the base asset
+
+## [Helper Hooks](/hooks/helpers/overview)
+
+Utility hooks for retrieving protocol data:
+
+- `useTotalSupply` - Get the total supply of the base asset in the protocol
+- `useTotalBorrow` - Get the total amount borrowed from the protocol
+- `useTotalCollateral` - Get the total collateral for a specific asset in the protocol
+- `useSuppliedBaseBalance` - Get the supplied base token balance for an account
+- `useBorrowBalance` - Get the borrow balance for an account
+- `useUserBasic` - Get basic information about a user's account
+- `useGetAssetInfo` - Get information about a specific asset by symbol
+- `useGetAssetInfoByAddress` - Get information about an asset by its address
+- `useGetPrice` - Get the price of an asset
+- `useAccrueAccount` - Accrue interest to an account
+- `useGetBaseAssetMarketInfo` - Get market information for the base asset
+- `useGetBaseAccrualScale` - Get the base accrual scale
+- `useGetBaseIndexScale` - Get the base index scale
+- `useGetFactorScale` - Get the factor scale used for calculations
+- `useGetPriceScale` - Get the price scale used for calculations
+- `useGetMaxAssets` - Get the maximum number of assets supported by the protocol
+
+## [Interest Rate Hooks](/hooks/interest-rates/overview)
+
+Hooks for getting interest rate information:
+
+- `useGetSupplyRate` - Get the supply rate for the base asset
+- `useGetBorrowRate` - Get the borrow rate for the base asset
+- `useGetUtilization` - Get the utilization rate of the protocol
+
+## [Liquidation Hooks](/hooks/liquidation/overview)
+
+Hooks for liquidation-related functionality:
+
+- `useIsLiquidatable` - Check if an account can be liquidated
+- `useAbsorb` - Absorb (liquidate) an underwater account
+- `useBuyCollateral` - Buy collateral from the protocol during liquidation
+- `useGetAskPrice` - Get the ask price for collateral during liquidation
+- `useGetLiquidatorPoints` - Get the liquidator points for an account
+- `useGetReserves` - Get the reserves of the protocol
+- `useGetCollateralReserves` - Get the collateral reserves for a specific asset
+- `useGetTargetReserves` - Get the target reserves for the protocol
+
+## [Protocol Rewards Hooks](/hooks/rewards/overview)
+
+Hooks for managing protocol rewards:
+
+- `useBaseTrackingAccrued` - Track accrued rewards for the base asset
+- `useGetRewardOwed` - Get the amount of reward token accrued but not yet claimed
+- `useClaimReward` - Claim accrued rewards 

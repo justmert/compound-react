@@ -1,0 +1,557 @@
+---
+title: 'Supply and Borrow Example'
+description: 'A complete example of a supply and borrow dashboard using Compound React'
+---
+
+This example demonstrates how to build a complete supply and borrow dashboard using Compound React. The dashboard allows users to:
+
+1. View their account information
+2. Supply collateral
+3. Borrow assets
+4. Repay borrowed assets
+5. Withdraw collateral
+
+## Complete Example
+
+```jsx
+import React, { useState } from 'react';
+import { 
+  CompoundProvider, 
+  useGetAccountInfo, 
+  useGetAllAssets,
+  useSupplyCollateral,
+  useWithdrawCollateral,
+  useBorrow,
+  useRepay,
+  useApprove,
+  useGetAllowance
+} from 'compound-react';
+import { providers } from 'ethers';
+
+function App() {
+  const provider = new providers.Web3Provider(window.ethereum);
+  
+  return (
+    <CompoundProvider provider={provider}>
+      <Dashboard />
+    </CompoundProvider>
+  );
+}
+
+function Dashboard() {
+  const [activeTab, setActiveTab] = useState('account');
+  
+  return (
+    <div className="dashboard">
+      <h1>Compound III Dashboard</h1>
+      
+      <div className="tabs">
+        <button 
+          className={activeTab === 'account' ? 'active' : ''} 
+          onClick={() => setActiveTab('account')}
+        >
+          Account
+        </button>
+        <button 
+          className={activeTab === 'supply' ? 'active' : ''} 
+          onClick={() => setActiveTab('supply')}
+        >
+          Supply
+        </button>
+        <button 
+          className={activeTab === 'borrow' ? 'active' : ''} 
+          onClick={() => setActiveTab('borrow')}
+        >
+          Borrow
+        </button>
+        <button 
+          className={activeTab === 'repay' ? 'active' : ''} 
+          onClick={() => setActiveTab('repay')}
+        >
+          Repay
+        </button>
+        <button 
+          className={activeTab === 'withdraw' ? 'active' : ''} 
+          onClick={() => setActiveTab('withdraw')}
+        >
+          Withdraw
+        </button>
+      </div>
+      
+      <div className="tab-content">
+        {activeTab === 'account' && <AccountTab />}
+        {activeTab === 'supply' && <SupplyTab />}
+        {activeTab === 'borrow' && <BorrowTab />}
+        {activeTab === 'repay' && <RepayTab />}
+        {activeTab === 'withdraw' && <WithdrawTab />}
+      </div>
+    </div>
+  );
+}
+
+function AccountTab() {
+  const { data: accountInfo, isLoading, error, refetch } = useGetAccountInfo();
+  
+  if (isLoading) return <div>Loading...</div>;
+  if (error) return <div>Error: {error.message}</div>;
+  
+  return (
+    <div>
+      <h2>Account Information</h2>
+      <button onClick={refetch}>Refresh</button>
+      
+      <div className="account-info">
+        <div className="info-item">
+          <h3>Address</h3>
+          <p>{accountInfo.address}</p>
+        </div>
+        
+        <div className="info-item">
+          <h3>Collateral Value</h3>
+          <p>${accountInfo.collateralValue.toFixed(2)}</p>
+        </div>
+        
+        <div className="info-item">
+          <h3>Borrow Balance</h3>
+          <p>${accountInfo.borrowBalance.toFixed(2)}</p>
+        </div>
+        
+        <div className="info-item">
+          <h3>Health Factor</h3>
+          <p>{accountInfo.healthFactor.toFixed(2)}</p>
+        </div>
+      </div>
+      
+      <h3>Collateral Balances</h3>
+      <table className="collateral-table">
+        <thead>
+          <tr>
+            <th>Asset</th>
+            <th>Balance</th>
+            <th>Value</th>
+          </tr>
+        </thead>
+        <tbody>
+          {Object.entries(accountInfo.collateralBalances).map(([asset, { symbol, balance, value }]) => (
+            <tr key={asset}>
+              <td>{symbol}</td>
+              <td>{balance.toFixed(4)}</td>
+              <td>${value.toFixed(2)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function SupplyTab() {
+  const { data: assets, isLoading: isLoadingAssets } = useGetAllAssets();
+  const [asset, setAsset] = useState('');
+  const [amount, setAmount] = useState('');
+  
+  const { data: allowance, isLoading: isLoadingAllowance, refetch: refetchAllowance } = useGetAllowance(asset);
+  const { approve, isLoading: isApproving } = useApprove();
+  const { supply, isLoading: isSupplying } = useSupplyCollateral();
+  
+  const handleApprove = async () => {
+    try {
+      await approve(asset);
+      alert('Successfully approved!');
+      refetchAllowance();
+    } catch (err) {
+      alert(`Error: ${err.message}`);
+    }
+  };
+  
+  const handleSupply = async () => {
+    try {
+      await supply(asset, amount);
+      alert('Successfully supplied collateral!');
+      setAmount('');
+    } catch (err) {
+      alert(`Error: ${err.message}`);
+    }
+  };
+  
+  if (isLoadingAssets) return <div>Loading assets...</div>;
+  
+  const needsApproval = allowance && allowance.isZero();
+  
+  return (
+    <div>
+      <h2>Supply Collateral</h2>
+      
+      <div className="form-group">
+        <label>
+          Asset:
+          <select value={asset} onChange={(e) => setAsset(e.target.value)}>
+            <option value="">Select an asset</option>
+            {assets.map((asset) => (
+              <option key={asset.symbol} value={asset.symbol}>
+                {asset.symbol}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+      
+      <div className="form-group">
+        <label>
+          Amount:
+          <input
+            type="text"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            placeholder="0.0"
+          />
+        </label>
+      </div>
+      
+      {asset && (
+        <>
+          {isLoadingAllowance ? (
+            <div>Checking allowance...</div>
+          ) : needsApproval ? (
+            <button 
+              onClick={handleApprove} 
+              disabled={isApproving || !asset}
+            >
+              {isApproving ? 'Approving...' : `Approve ${asset}`}
+            </button>
+          ) : (
+            <button 
+              onClick={handleSupply} 
+              disabled={isSupplying || !asset || !amount}
+            >
+              {isSupplying ? 'Supplying...' : 'Supply'}
+            </button>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+function BorrowTab() {
+  const { data: accountInfo, isLoading: isLoadingAccount } = useGetAccountInfo();
+  const [amount, setAmount] = useState('');
+  const { borrow, isLoading: isBorrowing } = useBorrow();
+  
+  const handleBorrow = async () => {
+    try {
+      await borrow(amount);
+      alert('Successfully borrowed!');
+      setAmount('');
+    } catch (err) {
+      alert(`Error: ${err.message}`);
+    }
+  };
+  
+  if (isLoadingAccount) return <div>Loading account info...</div>;
+  
+  const maxBorrowAmount = accountInfo.collateralValue * 0.8 - accountInfo.borrowBalance;
+  
+  return (
+    <div>
+      <h2>Borrow</h2>
+      
+      <div className="info-item">
+        <h3>Available to Borrow</h3>
+        <p>${Math.max(0, maxBorrowAmount).toFixed(2)}</p>
+      </div>
+      
+      <div className="form-group">
+        <label>
+          Amount:
+          <input
+            type="text"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            placeholder="0.0"
+          />
+        </label>
+      </div>
+      
+      <button 
+        onClick={handleBorrow} 
+        disabled={isBorrowing || !amount || parseFloat(amount) > maxBorrowAmount}
+      >
+        {isBorrowing ? 'Borrowing...' : 'Borrow'}
+      </button>
+    </div>
+  );
+}
+
+function RepayTab() {
+  const { data: accountInfo, isLoading: isLoadingAccount } = useGetAccountInfo();
+  const [amount, setAmount] = useState('');
+  const { repay, isLoading: isRepaying } = useRepay();
+  
+  const handleRepay = async () => {
+    try {
+      await repay(amount);
+      alert('Successfully repaid!');
+      setAmount('');
+    } catch (err) {
+      alert(`Error: ${err.message}`);
+    }
+  };
+  
+  if (isLoadingAccount) return <div>Loading account info...</div>;
+  
+  return (
+    <div>
+      <h2>Repay</h2>
+      
+      <div className="info-item">
+        <h3>Borrow Balance</h3>
+        <p>${accountInfo.borrowBalance.toFixed(2)}</p>
+      </div>
+      
+      <div className="form-group">
+        <label>
+          Amount:
+          <input
+            type="text"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            placeholder="0.0"
+          />
+        </label>
+      </div>
+      
+      <button 
+        onClick={handleRepay} 
+        disabled={isRepaying || !amount}
+      >
+        {isRepaying ? 'Repaying...' : 'Repay'}
+      </button>
+    </div>
+  );
+}
+
+function WithdrawTab() {
+  const { data: accountInfo, isLoading: isLoadingAccount } = useGetAccountInfo();
+  const [asset, setAsset] = useState('');
+  const [amount, setAmount] = useState('');
+  const { withdraw, isLoading: isWithdrawing } = useWithdrawCollateral();
+  
+  const handleWithdraw = async () => {
+    try {
+      await withdraw(asset, amount);
+      alert('Successfully withdrew collateral!');
+      setAmount('');
+    } catch (err) {
+      alert(`Error: ${err.message}`);
+    }
+  };
+  
+  if (isLoadingAccount) return <div>Loading account info...</div>;
+  
+  return (
+    <div>
+      <h2>Withdraw Collateral</h2>
+      
+      <div className="form-group">
+        <label>
+          Asset:
+          <select value={asset} onChange={(e) => setAsset(e.target.value)}>
+            <option value="">Select an asset</option>
+            {Object.entries(accountInfo.collateralBalances).map(([assetSymbol, { symbol, balance }]) => (
+              <option key={assetSymbol} value={assetSymbol}>
+                {symbol} ({balance.toFixed(4)})
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+      
+      <div className="form-group">
+        <label>
+          Amount:
+          <input
+            type="text"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            placeholder="0.0"
+          />
+        </label>
+      </div>
+      
+      <button 
+        onClick={handleWithdraw} 
+        disabled={isWithdrawing || !asset || !amount}
+      >
+        {isWithdrawing ? 'Withdrawing...' : 'Withdraw'}
+      </button>
+    </div>
+  );
+}
+
+export default App;
+```
+
+## CSS Styling
+
+Here's some basic CSS to style the dashboard:
+
+```css
+.dashboard {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px;
+  font-family: Arial, sans-serif;
+}
+
+h1 {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.tabs {
+  display: flex;
+  margin-bottom: 20px;
+  border-bottom: 1px solid #ccc;
+}
+
+.tabs button {
+  padding: 10px 20px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+.tabs button.active {
+  border-bottom: 2px solid #00D395;
+  color: #00D395;
+}
+
+.tab-content {
+  padding: 20px;
+  background-color: #f9f9f9;
+  border-radius: 5px;
+}
+
+.account-info {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+  margin-bottom: 30px;
+}
+
+.info-item {
+  background-color: white;
+  padding: 15px;
+  border-radius: 5px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.info-item h3 {
+  margin-top: 0;
+  color: #666;
+  font-size: 14px;
+}
+
+.info-item p {
+  margin-bottom: 0;
+  font-size: 18px;
+  font-weight: bold;
+}
+
+.collateral-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.collateral-table th,
+.collateral-table td {
+  padding: 10px;
+  text-align: left;
+  border-bottom: 1px solid #ddd;
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 5px;
+}
+
+.form-group input,
+.form-group select {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+}
+
+button {
+  padding: 10px 20px;
+  background-color: #00D395;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+button:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+```
+
+## Key Components
+
+### AccountTab
+
+The `AccountTab` component displays the user's account information, including their collateral value, borrow balance, health factor, and collateral balances.
+
+### SupplyTab
+
+The `SupplyTab` component allows users to supply collateral to the protocol. It includes:
+
+1. Asset selection
+2. Amount input
+3. Approval check and button
+4. Supply button
+
+### BorrowTab
+
+The `BorrowTab` component allows users to borrow the base asset. It includes:
+
+1. Available borrow amount calculation
+2. Amount input
+3. Borrow button
+
+### RepayTab
+
+The `RepayTab` component allows users to repay borrowed assets. It includes:
+
+1. Current borrow balance display
+2. Amount input
+3. Repay button
+
+### WithdrawTab
+
+The `WithdrawTab` component allows users to withdraw collateral. It includes:
+
+1. Asset selection (showing only assets with non-zero balances)
+2. Amount input
+3. Withdraw button
+
+## Next Steps
+
+This example demonstrates a basic supply and borrow dashboard. You can extend it with additional features such as:
+
+- Transaction history
+- Interest rate information
+- Protocol rewards
+- Health factor visualization
+- Multi-network support
+
+Check out the [Liquidation](/examples/liquidation) example for a complete dashboard that allows users to liquidate unhealthy positions. 

@@ -1,0 +1,640 @@
+---
+title: 'Helpers'
+description: 'Utility hooks for working with Compound III'
+---
+
+This section contains utility hooks that make it easier to work with Compound III.
+
+## Summary of Helper Hooks
+
+- [useTotalSupply](#usetotalsupply): Retrieves the total supply of the base asset in the protocol
+- [useTotalBorrow](#usetotalborrow): Retrieves the total amount borrowed from the protocol
+- [useTotalCollateral](#usetotalcollateral): Retrieves the total collateral for a specific asset
+- [useSuppliedBaseBalance](#usesuppliedbasebalance): Retrieves the supplied base token balance for an account
+- [useBorrowBalance](#useborrowbalance): Retrieves the borrow balance for an account
+- [useGetAssetInfo](#usegetassetinfo): Retrieves information about a specific asset by its symbol
+- [useGetAssetInfoByAddress](#usegetassetinfobyaddress): Retrieves information about an asset by its address
+- [useGetPrice](#usegetprice): Retrieves the current price of an asset
+- [useGetMaxAssets](#usegetmaxassets): Gets the maximum number of assets supported by the protocol
+- [useGetFactorScale](#usegetfactorscale): Retrieves the factor scale used for calculations
+- [useGetPriceScale](#usegetpricescale): Gets the price scale used for calculations
+- [useGetBaseIndexScale](#usegetbaseindexscale): Retrieves the base index scale
+- [useGetBaseAccrualScale](#usegetbaseaccrualscale): Gets the base accrual scale
+- [useGetBaseAssetMarketInfo](#usegetbaseassetmarketinfo): Retrieves market information for the base asset
+- [useUserBasic](#useuserbasic): Gets basic information about a user's account
+- [useAccrueAccount](#useaccrueaccount): Allows accruing interest for a specific account
+
+## useTotalSupply
+
+The `useTotalSupply` hook retrieves the total supply of the base asset in the protocol.
+
+### Usage
+
+```jsx
+import { useTotalSupply } from 'compound-react';
+
+function TotalSupplyDisplay() {
+  const { totalSupply, loading, error } = useTotalSupply();
+  
+  if (loading) return <div>Loading...</div>;
+  if (error) return <div>Error: {error.message}</div>;
+  
+  return (
+    <div>
+      <h2>Total Supply</h2>
+      <p>Total Supply: {totalSupply?.toString()}</p>
+    </div>
+  );
+}
+```
+
+### Return Value
+
+```typescript
+{
+  totalSupply: BigNumber | null;
+  loading: boolean;
+  error: Error | null;
+  refetch: () => Promise<BigNumber | null>;
+}
+```
+
+## useTotalBorrow
+
+The `useTotalBorrow` hook retrieves the total amount borrowed from the protocol.
+
+### Usage
+
+```jsx
+import { useTotalBorrow } from 'compound-react';
+
+function TotalBorrowDisplay() {
+  const { totalBorrow, loading, error } = useTotalBorrow();
+  
+  if (loading) return <div>Loading...</div>;
+  if (error) return <div>Error: {error.message}</div>;
+  
+  return (
+    <div>
+      <h2>Total Borrow</h2>
+      <p>Total: {ethers.utils.formatUnits(totalBorrow || 0, 6)} USDC</p>
+    </div>
+  );
+}
+```
+
+### Return Value
+
+```typescript
+{
+  totalBorrow: BigNumber | null;
+  loading: boolean;
+  error: Error | null;
+  refetch: () => Promise<BigNumber | null>;
+}
+```
+
+## useTotalCollateral
+
+The `useTotalCollateral` hook retrieves the total collateral for a specific asset in the protocol.
+
+### Usage
+
+```jsx
+import { useTotalCollateral } from 'compound-react';
+
+function TotalCollateralDisplay({ assetAddress }) {
+  const { totalCollateral, loading, error } = useTotalCollateral(null, assetAddress);
+  
+  if (loading) return <div>Loading...</div>;
+  if (error) return <div>Error: {error.message}</div>;
+  
+  return (
+    <div>
+      <h2>Total Collateral</h2>
+      <p>Total: {ethers.utils.formatUnits(totalCollateral || 0, 18)} WETH</p>
+    </div>
+  );
+}
+```
+
+### Return Value
+
+```typescript
+{
+  totalCollateral: BigNumber | null;
+  loading: boolean;
+  error: Error | null;
+  refetch: () => Promise<BigNumber | null>;
+}
+```
+
+## useSuppliedBaseBalance
+
+The `useSuppliedBaseBalance` hook retrieves the supplied base token balance for an account.
+
+### Usage
+
+```jsx
+import { useSuppliedBaseBalance } from 'compound-react';
+
+function SuppliedBalanceDisplay({ accountAddress }) {
+  const { balance, loading, error } = useSuppliedBaseBalance(null, accountAddress);
+  
+  if (loading) return <div>Loading...</div>;
+  if (error) return <div>Error: {error.message}</div>;
+  
+  return (
+    <div>
+      <h2>Supplied Balance</h2>
+      <p>Balance: {ethers.utils.formatUnits(balance || 0, 6)} USDC</p>
+    </div>
+  );
+}
+```
+
+### Return Value
+
+```typescript
+{
+  balance: BigNumber | null;
+  loading: boolean;
+  error: Error | null;
+  refetch: () => Promise<BigNumber | null>;
+}
+```
+
+## useBorrowBalance
+
+The `useBorrowBalance` hook retrieves the borrow balance for an account.
+
+### Usage
+
+```jsx
+import { useBorrowBalance } from 'compound-react';
+
+function BorrowBalanceDisplay({ accountAddress }) {
+  const { balance, loading, error } = useBorrowBalance(null, accountAddress);
+  
+  if (loading) return <div>Loading...</div>;
+  if (error) return <div>Error: {error.message}</div>;
+  
+  return (
+    <div>
+      <h2>Borrow Balance</h2>
+      <p>Balance: {ethers.utils.formatUnits(balance || 0, 6)} USDC</p>
+    </div>
+  );
+}
+```
+
+### Return Value
+
+```typescript
+{
+  balance: BigNumber | null;
+  loading: boolean;
+  error: Error | null;
+  refetch: () => Promise<BigNumber | null>;
+}
+```
+
+## useGetAssetInfo
+
+The `useGetAssetInfo` hook retrieves information about a specific asset by its symbol.
+
+### Usage
+
+```jsx
+import { useGetAssetInfo } from 'compound-react';
+
+function AssetInfoDisplay() {
+  const { assetInfo, loading, error } = useGetAssetInfo('WETH');
+  
+  if (loading) return <div>Loading...</div>;
+  if (error) return <div>Error: {error.message}</div>;
+  
+  return (
+    <div>
+      <h2>Asset Information</h2>
+      <p>Symbol: {assetInfo?.symbol}</p>
+      <p>Address: {assetInfo?.address}</p>
+      <p>Price: ${assetInfo?.price}</p>
+      <p>Decimals: {assetInfo?.decimals}</p>
+    </div>
+  );
+}
+```
+
+### Return Value
+
+```typescript
+{
+  assetInfo: {
+    symbol: string;
+    address: string;
+    price: number;
+    decimals: number;
+    isCollateral: boolean;
+    borrowCollateralFactor: number;
+    liquidateCollateralFactor: number;
+    supplyCapacity: BigNumber;
+  } | null;
+  loading: boolean;
+  error: Error | null;
+  refetch: () => Promise<AssetInfo | null>;
+}
+```
+
+## useGetAssetInfoByAddress
+
+The `useGetAssetInfoByAddress` hook retrieves information about an asset by its address.
+
+### Usage
+
+```jsx
+import { useGetAssetInfoByAddress } from 'compound-react';
+
+function AssetInfoByAddressDisplay({ assetAddress }) {
+  const { assetInfo, loading, error } = useGetAssetInfoByAddress(assetAddress);
+  
+  if (loading) return <div>Loading...</div>;
+  if (error) return <div>Error: {error.message}</div>;
+  
+  return (
+    <div>
+      <h2>Asset Information</h2>
+      <p>Symbol: {assetInfo?.symbol}</p>
+      <p>Address: {assetInfo?.address}</p>
+      <p>Price: ${assetInfo?.price}</p>
+      <p>Decimals: {assetInfo?.decimals}</p>
+    </div>
+  );
+}
+```
+
+### Return Value
+
+```typescript
+{
+  assetInfo: {
+    symbol: string;
+    address: string;
+    price: number;
+    decimals: number;
+    isCollateral: boolean;
+    borrowCollateralFactor: number;
+    liquidateCollateralFactor: number;
+    supplyCapacity: BigNumber;
+  } | null;
+  loading: boolean;
+  error: Error | null;
+  refetch: () => Promise<AssetInfo | null>;
+}
+```
+
+## useGetPrice
+
+The `useGetPrice` hook retrieves the current price of an asset.
+
+### Usage
+
+```jsx
+import { useGetPrice } from 'compound-react';
+
+function AssetPriceDisplay({ assetAddress }) {
+  const { price, loading, error } = useGetPrice(null, assetAddress);
+  
+  if (loading) return <div>Loading...</div>;
+  if (error) return <div>Error: {error.message}</div>;
+  
+  return (
+    <div>
+      <h2>Asset Price</h2>
+      <p>Price: ${price?.toString()}</p>
+    </div>
+  );
+}
+```
+
+### Return Value
+
+```typescript
+{
+  price: BigNumber | null;
+  loading: boolean;
+  error: Error | null;
+  refetch: () => Promise<BigNumber | null>;
+}
+```
+
+## useGetMaxAssets
+
+The `useGetMaxAssets` hook retrieves the maximum number of assets that can be supported by the protocol.
+
+### Usage
+
+```jsx
+import { useGetMaxAssets } from 'compound-react';
+
+function MaxAssetsDisplay() {
+  const { maxAssets, loading, error } = useGetMaxAssets();
+  
+  if (loading) return <div>Loading...</div>;
+  if (error) return <div>Error: {error.message}</div>;
+  
+  return (
+    <div>
+      <h2>Maximum Supported Assets</h2>
+      <p>Max Assets: {maxAssets}</p>
+    </div>
+  );
+}
+```
+
+### Return Value
+
+```typescript
+{
+  maxAssets: number | null;
+  loading: boolean;
+  error: Error | null;
+  refetch: () => Promise<number | null>;
+}
+```
+
+## useGetFactorScale
+
+The `useGetFactorScale` hook retrieves the factor scale used for calculations in the protocol.
+
+### Usage
+
+```jsx
+import { useGetFactorScale } from 'compound-react';
+
+function FactorScaleDisplay() {
+  const { factorScale, loading, error } = useGetFactorScale();
+  
+  if (loading) return <div>Loading...</div>;
+  if (error) return <div>Error: {error.message}</div>;
+  
+  return (
+    <div>
+      <h2>Factor Scale</h2>
+      <p>Scale: {factorScale?.toString()}</p>
+    </div>
+  );
+}
+```
+
+### Return Value
+
+```typescript
+{
+  factorScale: BigNumber | null;
+  loading: boolean;
+  error: Error | null;
+  refetch: () => Promise<BigNumber | null>;
+}
+```
+
+## useGetPriceScale
+
+The `useGetPriceScale` hook retrieves the price scale used for calculations in the protocol.
+
+### Usage
+
+```jsx
+import { useGetPriceScale } from 'compound-react';
+
+function PriceScaleDisplay() {
+  const { priceScale, loading, error } = useGetPriceScale();
+  
+  if (loading) return <div>Loading...</div>;
+  if (error) return <div>Error: {error.message}</div>;
+  
+  return (
+    <div>
+      <h2>Price Scale</h2>
+      <p>Scale: {priceScale?.toString()}</p>
+    </div>
+  );
+}
+```
+
+### Return Value
+
+```typescript
+{
+  priceScale: BigNumber | null;
+  loading: boolean;
+  error: Error | null;
+  refetch: () => Promise<BigNumber | null>;
+}
+```
+
+## useGetBaseIndexScale
+
+The `useGetBaseIndexScale` hook retrieves the base index scale used for calculations in the protocol.
+
+### Usage
+
+```jsx
+import { useGetBaseIndexScale } from 'compound-react';
+
+function BaseIndexScaleDisplay() {
+  const { baseIndexScale, loading, error } = useGetBaseIndexScale();
+  
+  if (loading) return <div>Loading...</div>;
+  if (error) return <div>Error: {error.message}</div>;
+  
+  return (
+    <div>
+      <h2>Base Index Scale</h2>
+      <p>Scale: {baseIndexScale?.toString()}</p>
+    </div>
+  );
+}
+```
+
+### Return Value
+
+```typescript
+{
+  baseIndexScale: BigNumber | null;
+  loading: boolean;
+  error: Error | null;
+  refetch: () => Promise<BigNumber | null>;
+}
+```
+
+## useGetBaseAccrualScale
+
+The `useGetBaseAccrualScale` hook retrieves the base accrual scale used for calculations in the protocol.
+
+### Usage
+
+```jsx
+import { useGetBaseAccrualScale } from 'compound-react';
+
+function BaseAccrualScaleDisplay() {
+  const { baseAccrualScale, loading, error } = useGetBaseAccrualScale();
+  
+  if (loading) return <div>Loading...</div>;
+  if (error) return <div>Error: {error.message}</div>;
+  
+  return (
+    <div>
+      <h2>Base Accrual Scale</h2>
+      <p>Scale: {baseAccrualScale?.toString()}</p>
+    </div>
+  );
+}
+```
+
+### Return Value
+
+```typescript
+{
+  baseAccrualScale: BigNumber | null;
+  loading: boolean;
+  error: Error | null;
+  refetch: () => Promise<BigNumber | null>;
+}
+```
+
+## useGetBaseAssetMarketInfo
+
+The `useGetBaseAssetMarketInfo` hook retrieves market information for the base asset.
+
+### Usage
+
+```jsx
+import { useGetBaseAssetMarketInfo } from 'compound-react';
+
+function BaseAssetMarketInfoDisplay() {
+  const { marketInfo, loading, error } = useGetBaseAssetMarketInfo();
+  
+  if (loading) return <div>Loading...</div>;
+  if (error) return <div>Error: {error.message}</div>;
+  
+  return (
+    <div>
+      <h2>Base Asset Market Info</h2>
+      <p>Symbol: {marketInfo?.symbol}</p>
+      <p>Address: {marketInfo?.address}</p>
+      <p>Decimals: {marketInfo?.decimals}</p>
+      <p>Supply Cap: {marketInfo?.supplyCap?.toString()}</p>
+    </div>
+  );
+}
+```
+
+### Return Value
+
+```typescript
+{
+  marketInfo: {
+    symbol: string;
+    address: string;
+    decimals: number;
+    supplyCap: BigNumber;
+    storeFrontPriceFactor: BigNumber;
+    trackingIndexScale: BigNumber;
+    baseTrackingSupplySpeed: BigNumber;
+    baseTrackingBorrowSpeed: BigNumber;
+    baseMinForRewards: BigNumber;
+    baseBorrowMin: BigNumber;
+  } | null;
+  loading: boolean;
+  error: Error | null;
+  refetch: () => Promise<BaseAssetMarketInfo | null>;
+}
+```
+
+## useUserBasic
+
+The `useUserBasic` hook retrieves basic information about a user's account.
+
+### Usage
+
+```jsx
+import { useUserBasic } from 'compound-react';
+
+function UserBasicInfoDisplay({ accountAddress }) {
+  const { userBasic, loading, error } = useUserBasic(null, accountAddress);
+  
+  if (loading) return <div>Loading...</div>;
+  if (error) return <div>Error: {error.message}</div>;
+  
+  return (
+    <div>
+      <h2>User Basic Info</h2>
+      <p>Principal: {ethers.utils.formatUnits(userBasic?.principal || 0, 6)}</p>
+      <p>Base Tracking Accrued: {userBasic?.baseTrackingAccrued.toString()}</p>
+    </div>
+  );
+}
+```
+
+### Return Value
+
+```typescript
+{
+  userBasic: {
+    principal: BigNumber;
+    baseTrackingIndex: BigNumber;
+    baseTrackingAccrued: BigNumber;
+    assetsIn: BigNumber;
+  } | null;
+  loading: boolean;
+  error: Error | null;
+  refetch: () => Promise<UserBasic | null>;
+}
+```
+
+## useAccrueAccount
+
+The `useAccrueAccount` hook allows accruing interest for a specific account.
+
+### Usage
+
+```jsx
+import { useAccrueAccount } from 'compound-react';
+
+function AccrueAccountComponent() {
+  const { accrueAccount, loading, error } = useAccrueAccount();
+  
+  const handleAccrue = async () => {
+    try {
+      const accountAddress = '0x1234...';
+      const success = await accrueAccount(accountAddress);
+      if (success) {
+        alert('Successfully accrued account!');
+      }
+    } catch (err) {
+      console.error('Error accruing account:', err);
+    }
+  };
+  
+  return (
+    <div>
+      <h2>Accrue Account</h2>
+      <button onClick={handleAccrue} disabled={loading}>
+        {loading ? 'Accruing...' : 'Accrue Account'}
+      </button>
+      {error && <p>Error: {error.message}</p>}
+    </div>
+  );
+}
+```
+
+### Return Value
+
+```typescript
+{
+  accrueAccount: (accountAddress: string) => Promise<boolean>;
+  loading: boolean;
+  error: Error | null;
+}
+``` 

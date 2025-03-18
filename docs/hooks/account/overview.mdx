@@ -1,0 +1,269 @@
+---
+title: 'Account Management'
+description: 'Hooks for managing user accounts and permissions in Compound III'
+---
+
+The account management hooks in Compound React allow you to interact with user accounts and manage permissions in the Compound III protocol.
+
+## Summary of Account Management Hooks
+
+- [useAllow](#useallow): Allows or disallows another address to withdraw or transfer
+- [useAllowBySig](#useallowbysig): Allows or disallows using EIP-712 signatures for gasless approvals
+- [useUserNonce](#useusernonce): Retrieves the current nonce for a user
+- [useVersion](#useversion): Retrieves the current version of the Comet contract
+- [useHasPermission](#usehaspermission): Checks if an account has permission to act on behalf of another
+- [useTransfer](#usetransfer): Transfers base tokens from the sender to another account
+
+## useAllow
+
+The `useAllow` hook allows or disallows another address to withdraw or transfer on behalf of the sender's address.
+
+### Usage
+
+```jsx
+import { useAllow } from 'compound-react';
+
+function AllowComponent() {
+  const { allow, loading, error, txHash } = useAllow();
+  
+  const handleAllow = async () => {
+    // Allow an address to act on behalf of the sender
+    const managerAddress = '0x1234...';
+    const isAllowed = true; // Set to false to disallow
+    const tx = await allow(managerAddress, isAllowed);
+    console.log('Allow transaction:', tx);
+  };
+  
+  return (
+    <div>
+      <button onClick={handleAllow} disabled={loading}>
+        {loading ? 'Processing...' : 'Allow Manager'}
+      </button>
+      {error && <p>Error: {error.message}</p>}
+      {txHash && <p>Transaction: {txHash}</p>}
+    </div>
+  );
+}
+```
+
+### Return Value
+
+```typescript
+{
+  allow: (manager: string, isAllowed: boolean) => Promise<string | null>; // Returns transaction hash
+  loading: boolean;
+  error: Error | null;
+  txHash: string | null;
+}
+```
+
+## useAllowBySig
+
+The `useAllowBySig` hook allows or disallows another address to withdraw or transfer on behalf of the sender's address using EIP-712 signatures for gasless approvals.
+
+### Usage
+
+```jsx
+import { useAllowBySig } from 'compound-react';
+
+function AllowBySigComponent() {
+  const { allowBySig, loading, error, txHash } = useAllowBySig();
+  
+  const handleAllowBySig = async () => {
+    // Allow an address to act on behalf of the sender using a signature
+    const owner = '0xOwner...';
+    const manager = '0xManager...';
+    const isAllowed = true;
+    const nonce = 1; // Get from useUserNonce
+    const expiry = Math.floor(Date.now() / 1000) + 3600; // 1 hour from now
+    const signature = '0xSignature...'; // EIP-712 signature
+    
+    const tx = await allowBySig(owner, manager, isAllowed, nonce, expiry, signature);
+    console.log('AllowBySig transaction:', tx);
+  };
+  
+  return (
+    <div>
+      <button onClick={handleAllowBySig} disabled={loading}>
+        {loading ? 'Processing...' : 'Allow By Signature'}
+      </button>
+      {error && <p>Error: {error.message}</p>}
+      {txHash && <p>Transaction: {txHash}</p>}
+    </div>
+  );
+}
+```
+
+### Return Value
+
+```typescript
+{
+  allowBySig: (
+    owner: string,
+    manager: string,
+    isAllowed: boolean,
+    nonce: number,
+    expiry: number,
+    signature: string
+  ) => Promise<string | null>; // Returns transaction hash
+  loading: boolean;
+  error: Error | null;
+  txHash: string | null;
+}
+```
+
+## useUserNonce
+
+The `useUserNonce` hook retrieves the current nonce for a user, which is used for signed transactions.
+
+### Usage
+
+```jsx
+import { useUserNonce } from 'compound-react';
+
+function UserNonceDisplay({ accountAddress }) {
+  const { nonce, loading, error } = useUserNonce(null, accountAddress);
+  
+  if (loading) return <div>Loading...</div>;
+  if (error) return <div>Error: {error.message}</div>;
+  
+  return (
+    <div>
+      <h2>User Nonce</h2>
+      <p>Nonce: {nonce?.toString()}</p>
+    </div>
+  );
+}
+```
+
+### Return Value
+
+```typescript
+{
+  nonce: number | null;
+  loading: boolean;
+  error: Error | null;
+  refetch: () => Promise<number | null>;
+}
+```
+
+## useVersion
+
+The `useVersion` hook retrieves the current version of the Comet contract.
+
+### Usage
+
+```jsx
+import { useVersion } from 'compound-react';
+
+function VersionDisplay() {
+  const { version, loading, error } = useVersion();
+  
+  if (loading) return <div>Loading...</div>;
+  if (error) return <div>Error: {error.message}</div>;
+  
+  return (
+    <div>
+      <h2>Comet Version</h2>
+      <p>Version: {version}</p>
+    </div>
+  );
+}
+```
+
+### Return Value
+
+```typescript
+{
+  version: string | null;
+  loading: boolean;
+  error: Error | null;
+  refetch: () => Promise<string | null>;
+}
+```
+
+## useHasPermission
+
+The `useHasPermission` hook checks if an account has permission to act on behalf of another account.
+
+### Usage
+
+```jsx
+import { useHasPermission } from 'compound-react';
+
+function PermissionCheckDisplay({ ownerAddress, managerAddress }) {
+  const { 
+    hasPermission, 
+    loading, 
+    error 
+  } = useHasPermission(null, ownerAddress, managerAddress);
+  
+  if (loading) return <div>Loading...</div>;
+  if (error) return <div>Error: {error.message}</div>;
+  
+  return (
+    <div>
+      <h2>Permission Check</h2>
+      <p>
+        {hasPermission 
+          ? 'Manager has permission to act on behalf of owner' 
+          : 'Manager does not have permission to act on behalf of owner'}
+      </p>
+    </div>
+  );
+}
+```
+
+### Return Value
+
+```typescript
+{
+  hasPermission: boolean | null;
+  loading: boolean;
+  error: Error | null;
+  refetch: () => Promise<boolean | null>;
+}
+```
+
+## useTransfer
+
+The `useTransfer` hook transfers base tokens from the sender to another account.
+
+### Usage
+
+```jsx
+import { useTransfer } from 'compound-react';
+
+function TransferComponent() {
+  const { transfer, loading, error, txHash } = useTransfer();
+  
+  const handleTransfer = async () => {
+    // Transfer 100 USDC to recipient
+    const recipient = '0xRecipient...';
+    const amount = ethers.utils.parseUnits('100', 6); // 100 USDC with 6 decimals
+    const tx = await transfer(recipient, amount);
+    console.log('Transfer transaction:', tx);
+  };
+  
+  return (
+    <div>
+      <button onClick={handleTransfer} disabled={loading}>
+        {loading ? 'Transferring...' : 'Transfer 100 USDC'}
+      </button>
+      {error && <p>Error: {error.message}</p>}
+      {txHash && <p>Transaction: {txHash}</p>}
+    </div>
+  );
+}
+```
+
+### Return Value
+
+```typescript
+{
+  transfer: (dst: string, amount: BigNumber) => Promise<string | null>; // Returns transaction hash
+  loading: boolean;
+  error: Error | null;
+  txHash: string | null;
+}
+``` 

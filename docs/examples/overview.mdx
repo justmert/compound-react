@@ -1,0 +1,212 @@
+---
+title: 'Examples'
+description: 'Example code snippets and use cases for Compound React'
+---
+
+This section provides example code snippets and use cases for Compound React. These examples demonstrate how to use the library to build DeFi applications that interact with the Compound III protocol.
+
+## Basic Examples
+
+### Setting Up the Provider
+
+```jsx
+import React from 'react';
+import { CompoundProvider } from 'compound-react';
+import { providers } from 'ethers';
+
+function App() {
+  const provider = new providers.Web3Provider(window.ethereum);
+  
+  return (
+    <CompoundProvider provider={provider}>
+      <YourApp />
+    </CompoundProvider>
+  );
+}
+```
+
+### Getting Asset Information
+
+```jsx
+import React from 'react';
+import { useGetAssetInfo } from 'compound-react';
+
+function AssetInfo() {
+  const { data: usdcInfo, isLoading, error } = useGetAssetInfo('USDC');
+  
+  if (isLoading) return <div>Loading...</div>;
+  if (error) return <div>Error: {error.message}</div>;
+  
+  return (
+    <div>
+      <h2>USDC Information</h2>
+      <p>Symbol: {usdcInfo.symbol}</p>
+      <p>Price: ${usdcInfo.price.toFixed(2)}</p>
+      <p>Supply APY: {usdcInfo.supplyApy.toFixed(2)}%</p>
+      <p>Borrow APY: {usdcInfo.borrowApy.toFixed(2)}%</p>
+    </div>
+  );
+}
+```
+
+### Getting Account Information
+
+```jsx
+import React from 'react';
+import { useGetAccountInfo } from 'compound-react';
+
+function AccountInfo() {
+  const { data: accountInfo, isLoading, error } = useGetAccountInfo();
+  
+  if (isLoading) return <div>Loading...</div>;
+  if (error) return <div>Error: {error.message}</div>;
+  
+  return (
+    <div>
+      <h2>Account Information</h2>
+      <p>Address: {accountInfo.address}</p>
+      <p>Collateral Value: ${accountInfo.collateralValue.toFixed(2)}</p>
+      <p>Borrow Balance: ${accountInfo.borrowBalance.toFixed(2)}</p>
+      <p>Health Factor: {accountInfo.healthFactor.toFixed(2)}</p>
+    </div>
+  );
+}
+```
+
+## Advanced Examples
+
+### Supply and Borrow Dashboard
+
+Check out the [Supply and Borrow](/examples/supply-borrow) example for a complete dashboard that allows users to supply collateral and borrow assets.
+
+### Liquidation Dashboard
+
+Check out the [Liquidation](/examples/liquidation) example for a complete dashboard that allows users to liquidate unhealthy positions.
+
+## Common Patterns
+
+### Loading and Error States
+
+Most hooks in Compound React return `isLoading` and `error` properties that can be used to handle loading and error states:
+
+```jsx
+import React from 'react';
+import { useGetAssetInfo } from 'compound-react';
+
+function AssetInfo() {
+  const { data: usdcInfo, isLoading, error } = useGetAssetInfo('USDC');
+  
+  if (isLoading) {
+    return <div>Loading...</div>;
+  }
+  
+  if (error) {
+    return <div>Error: {error.message}</div>;
+  }
+  
+  return (
+    <div>
+      <h2>USDC Information</h2>
+      <p>Symbol: {usdcInfo.symbol}</p>
+      <p>Price: ${usdcInfo.price.toFixed(2)}</p>
+      <p>Supply APY: {usdcInfo.supplyApy.toFixed(2)}%</p>
+      <p>Borrow APY: {usdcInfo.borrowApy.toFixed(2)}%</p>
+    </div>
+  );
+}
+```
+
+### Form Handling
+
+When building forms for supplying collateral, borrowing, or other actions, you can use the following pattern:
+
+```jsx
+import React, { useState } from 'react';
+import { useSupplyCollateral } from 'compound-react';
+
+function SupplyCollateralForm() {
+  const [asset, setAsset] = useState('WETH');
+  const [amount, setAmount] = useState('');
+  const { supply, isLoading, error } = useSupplyCollateral();
+  
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    try {
+      await supply(asset, amount);
+      alert('Successfully supplied collateral!');
+      setAmount('');
+    } catch (err) {
+      alert(`Error: ${err.message}`);
+    }
+  };
+  
+  return (
+    <form onSubmit={handleSubmit}>
+      <div>
+        <label>
+          Asset:
+          <select value={asset} onChange={(e) => setAsset(e.target.value)}>
+            <option value="WETH">WETH</option>
+            <option value="USDC">USDC</option>
+            <option value="USDT">USDT</option>
+          </select>
+        </label>
+      </div>
+      <div>
+        <label>
+          Amount:
+          <input
+            type="text"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            placeholder="0.0"
+          />
+        </label>
+      </div>
+      <button type="submit" disabled={isLoading || !amount}>
+        {isLoading ? 'Supplying...' : 'Supply'}
+      </button>
+      {error && <p>Error: {error.message}</p>}
+    </form>
+  );
+}
+```
+
+### Refreshing Data
+
+Most hooks in Compound React return a `refetch` function that can be used to manually refresh the data:
+
+```jsx
+import React from 'react';
+import { useGetAccountInfo } from 'compound-react';
+
+function AccountInfo() {
+  const { data: accountInfo, isLoading, error, refetch } = useGetAccountInfo();
+  
+  return (
+    <div>
+      <h2>Account Information</h2>
+      {isLoading ? (
+        <div>Loading...</div>
+      ) : error ? (
+        <div>Error: {error.message}</div>
+      ) : (
+        <>
+          <p>Address: {accountInfo.address}</p>
+          <p>Collateral Value: ${accountInfo.collateralValue.toFixed(2)}</p>
+          <p>Borrow Balance: ${accountInfo.borrowBalance.toFixed(2)}</p>
+          <p>Health Factor: {accountInfo.healthFactor.toFixed(2)}</p>
+        </>
+      )}
+      <button onClick={refetch} disabled={isLoading}>
+        Refresh
+      </button>
+    </div>
+  );
+}
+```
+
+## Next Steps
+
+Check out the [Supply and Borrow](/examples/supply-borrow) and [Liquidation](/examples/liquidation) examples for more complete examples of how to use Compound React to build DeFi applications. 

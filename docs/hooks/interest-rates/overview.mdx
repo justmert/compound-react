@@ -1,0 +1,141 @@
+---
+title: 'Interest Rates'
+description: 'Hooks for working with interest rates on Compound III'
+---
+
+This section contains hooks for retrieving and calculating interest rates on Compound III.
+
+## Summary of Interest Rate Hooks
+
+- [useGetSupplyRate](#usegetsupplyrate): Retrieves the current supply interest rate for the base asset
+- [useGetBorrowRate](#usegetborrowrate): Retrieves the current borrow interest rate for the base asset
+- [useGetUtilization](#usegetutilization): Retrieves the current utilization rate of the protocol
+
+## useGetSupplyRate
+
+The `useGetSupplyRate` hook retrieves the current supply interest rate for the base asset.
+
+### Usage
+
+```jsx
+import { useGetSupplyRate } from 'compound-react';
+
+function SupplyRateDisplay() {
+  const { 
+    supplyRate, 
+    loading, 
+    error 
+  } = useGetSupplyRate();
+  
+  if (loading) return <div>Loading...</div>;
+  if (error) return <div>Error: {error.message}</div>;
+  
+  // Convert to APY percentage
+  const supplyRateAPY = (supplyRate * 100).toFixed(2);
+  
+  return (
+    <div>
+      <h2>Supply Rate</h2>
+      <p>Current Supply APY: {supplyRateAPY}%</p>
+    </div>
+  );
+}
+```
+
+### Return Value
+
+```typescript
+{
+  supplyRate: BigNumber | null;  // Raw supply rate as BigNumber
+  supplyRateAPR: number | null;  // Annual Percentage Rate (simple interest)
+  supplyRateAPY: number | null;  // Annual Percentage Yield (compounded)
+  loading: boolean;
+  error: Error | null;
+  refetch: () => Promise<void>;
+}
+```
+
+## useGetBorrowRate
+
+The `useGetBorrowRate` hook retrieves the current borrow interest rate for the base asset.
+
+### Usage
+
+```jsx
+import { useGetBorrowRate } from 'compound-react';
+
+function BorrowRateDisplay() {
+  const { 
+    borrowRate, 
+    borrowRateAPR, 
+    borrowRateAPY, 
+    loading, 
+    error 
+  } = useGetBorrowRate();
+  
+  if (loading) return <div>Loading...</div>;
+  if (error) return <div>Error: {error.message}</div>;
+  
+  return (
+    <div>
+      <h2>Borrow Rate</h2>
+      <p>APR: {borrowRateAPR?.toFixed(2)}%</p>
+      <p>APY: {borrowRateAPY?.toFixed(2)}%</p>
+    </div>
+  );
+}
+```
+
+### Return Value
+
+```typescript
+{
+  borrowRate: BigNumber | null;  // Raw borrow rate as BigNumber
+  borrowRateAPR: number | null;  // Annual Percentage Rate (simple interest)
+  borrowRateAPY: number | null;  // Annual Percentage Yield (compounded)
+  loading: boolean;
+  error: Error | null;
+  refetch: () => Promise<void>;
+}
+```
+
+## useGetUtilization
+
+The `useGetUtilization` hook retrieves the current utilization rate of the protocol, which is the ratio of borrowed assets to supplied assets.
+
+### Usage
+
+```jsx
+import { useGetUtilization } from 'compound-react';
+
+function UtilizationDisplay() {
+  const { 
+    utilization, 
+    utilizationRate, 
+    loading, 
+    error 
+  } = useGetUtilization();
+  
+  if (loading) return <div>Loading...</div>;
+  if (error) return <div>Error: {error.message}</div>;
+  
+  return (
+    <div>
+      <h2>Protocol Utilization</h2>
+      <p>Utilization Rate: {utilizationRate?.toFixed(2)}%</p>
+    </div>
+  );
+}
+```
+
+### Return Value
+
+```typescript
+{
+  utilization: BigNumber | null;  // Raw utilization as BigNumber
+  utilizationRate: number | null; // Utilization as percentage (0-100)
+  loading: boolean;
+  error: Error | null;
+  refetch: () => Promise<void>;
+}
+``` 
