@@ -2,6 +2,8 @@
 
 A complete React kit for interacting with Compound III protocol across all supported networks and markets.
 
+See the documentation: https://compound-react.mintlify.app/
+
 [![npm](https://img.shields.io/npm/v/compound-react-kit)](https://www.npmjs.com/package/compound-react-kit)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
