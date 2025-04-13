@@ -1,7 +1,7 @@
 {
   "name": "compound-react-kit",
   "type": "module",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "description": "React hooks library for interacting with Compound III (Comet)",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -34,8 +34,8 @@
   "author": "Mert Köklü",
   "license": "MIT",
   "peerDependencies": {
-    "react": ">=16.8.0",
-    "react-dom": ">=16.8.0"
+    "react": "^18.0.0",
+    "react-dom": "^18.0.0"
   },
   "dependencies": {
     "@ethersproject/contracts": "^5.8.0",
@@ -64,17 +64,17 @@
   "devDependencies": {
     "@testing-library/dom": "^10.4.0",
     "@testing-library/jest-dom": "^6.6.3",
-    "@testing-library/react": "^16.2.0",
-    "@testing-library/react-hooks": "^8.0.1",
+    "@testing-library/react": "^14.2.1",
+    "@testing-library/react-hooks": "^7.0.2",
     "@types/jest": "^29.5.14",
-    "@types/react": "^19.0.10",
-    "@types/react-dom": "^19.0.4",
+    "@types/react": "^18.2.64",
+    "@types/react-dom": "^18.2.21",
     "http-server": "^14.1.1",
     "jest": "^29.7.0",
     "jest-environment-jsdom": "^29.7.0",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0",
-    "react-test-renderer": "^19.0.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-test-renderer": "^18.2.0",
     "ts-jest": "^29.2.6",
     "tslib": "^2.8.1",
     "typescript": "^5.8.2"
